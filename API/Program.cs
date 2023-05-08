@@ -1,3 +1,7 @@
+using API.Extensions;
+using Microsoft.Extensions.Options;
+using System.Reflection;
+
 namespace API
 {
     public class Program
@@ -8,7 +12,17 @@ namespace API
 
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddLocalizationServices(builder.Configuration);
+            builder.Services.AddControllers()
+                .AddDataAnnotationsLocalization(opts =>
+                {
+                    opts.DataAnnotationLocalizerProvider = (type, factory) =>
+                    {
+                        var assemblyName = new AssemblyName(typeof(SharedResource).GetTypeInfo().Assembly.FullName!);
+                        return factory.Create(nameof(SharedResource), assemblyName.Name!);
+                    };
+                });
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -26,6 +40,7 @@ namespace API
 
             app.UseAuthorization();
 
+            app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
 
             app.MapControllers();
 
