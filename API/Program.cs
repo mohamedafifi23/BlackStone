@@ -9,7 +9,8 @@ namespace API
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            //builder.Logging.ClearProviders();
+            //builder.Logging.AddConsole();
             // Add services to the container.
 
             builder.Services.AddLocalizationServices(builder.Configuration);

@@ -27,6 +27,7 @@ namespace API.Controllers
         [HttpGet(Name = "GetWeatherForecast")]
         public IEnumerable<WeatherForecast> Get()
         {
+            _logger.LogError("kkkkkkkkh");
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
             {
                 Date = DateTime.Now.AddDays(index),
@@ -48,7 +49,9 @@ namespace API.Controllers
 
         [HttpPost("TestLocalizationDA")]
         public string Add(TestDto dto)
-        {
+        {            
+            _logger.LogInformation(DateTime.Now.ToLongTimeString());
+
             var res = _sharedResourceLocalizer["hello"];
             //var res = _localizer2.GetString("hello").Value ?? "";
 

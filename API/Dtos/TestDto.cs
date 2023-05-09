@@ -1,4 +1,5 @@
 ﻿using API.Resources;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace API.Dtos
@@ -11,7 +12,6 @@ namespace API.Dtos
         [Display(Name ="test name")]
         [StringLength(100, MinimumLength =5, ErrorMessage =null,
             ErrorMessageResourceName = "TestDto_StringLength", ErrorMessageResourceType = typeof(ValidationResource))]
-        
         public string Name { get; set; } 
     }
 }
