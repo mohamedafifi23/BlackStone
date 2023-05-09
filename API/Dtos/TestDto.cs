@@ -1,13 +1,17 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using API.Resources;
+using System.ComponentModel.DataAnnotations;
 
 namespace API.Dtos
 {
     public class TestDto
     {
-        public int Id { get; set; }
-
-        [Required]
-        [StringLength(100, MinimumLength =5, ErrorMessage ="{0} min len is 5")]
+        [Required(
+            ErrorMessageResourceName = "TestDto_Required",
+            ErrorMessageResourceType =typeof(ValidationResource))]
+        [Display(Name ="test name")]
+        [StringLength(100, MinimumLength =5, ErrorMessage =null,
+            ErrorMessageResourceName = "TestDto_StringLength", ErrorMessageResourceType = typeof(ValidationResource))]
+        
         public string Name { get; set; } 
     }
 }

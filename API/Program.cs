@@ -13,15 +13,7 @@ namespace API
             // Add services to the container.
 
             builder.Services.AddLocalizationServices(builder.Configuration);
-            builder.Services.AddControllers()
-                .AddDataAnnotationsLocalization(opts =>
-                {
-                    opts.DataAnnotationLocalizerProvider = (type, factory) =>
-                    {
-                        var assemblyName = new AssemblyName(typeof(SharedResource).GetTypeInfo().Assembly.FullName!);
-                        return factory.Create(nameof(SharedResource), assemblyName.Name!);
-                    };
-                });
+            builder.Services.AddControllers();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();

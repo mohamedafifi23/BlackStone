@@ -12,21 +12,16 @@ namespace API.Controllers
         private static readonly string[] Summaries = new[]
         {
         "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
+        };
 
         private readonly ILogger<WeatherForecastController> _logger;
-        private readonly IStringLocalizer<SharedResource> _sharedResourceLocalizer;
-        private readonly IStringLocalizer<WeatherForecastController> _controllerLocalizer;
-        private readonly IStringLocalizer _localizer;
-        private readonly IStringLocalizer _localizer2;
+        private readonly IStringLocalizer<SharedResource> _sharedResourceLocalizer;       
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger,
-            IStringLocalizer<SharedResource> sharedResourceLocalizer,
-            IStringLocalizer<WeatherForecastController> controllerLocalizer)
+            IStringLocalizer<SharedResource> sharedResourceLocalizer)
         {
             _logger = logger;
             _sharedResourceLocalizer = sharedResourceLocalizer;
-            _controllerLocalizer = controllerLocalizer;           
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
