@@ -2,6 +2,8 @@ using API.Extensions;
 using Microsoft.Extensions.Options;
 using Serilog;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace API
 {
@@ -23,7 +25,12 @@ namespace API
 
                 // Add services to the container.
                 builder.Services.AddLocalizationServices(builder.Configuration);
-                builder.Services.AddControllers();
+                builder.Services.AddControllers()
+                    .AddJsonOptions(options =>
+                    {
+                        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+                    });
+                builder.Services.AddApplicationServices(builder.Configuration);
 
                 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
                 builder.Services.AddEndpointsApiExplorer();
@@ -44,6 +51,8 @@ namespace API
 
                 app.UseHttpsRedirection();
 
+                app.UseCors("corsPolicy");
+                
                 app.UseAuthorization();
 
                 app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
