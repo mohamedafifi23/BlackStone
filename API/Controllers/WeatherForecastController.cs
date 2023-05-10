@@ -40,10 +40,18 @@ namespace API.Controllers
         [HttpGet("TestLocalization")]
         public string GetLocalization()
         {
-            var res = _sharedResourceLocalizer["hello"];
-            //var res = _localizer2.GetString("hello").Value ?? "";
-            _logger.LogError(res);
-            //return _sharedResourceLocalizer["hello"];
+                var res = _sharedResourceLocalizer["hello"];
+            try
+            {
+                //var res = _localizer2.GetString("hello").Value ?? "";
+                //return _sharedResourceLocalizer["hello"];
+                throw new NullReferenceException();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+            }
+
             return _sharedResourceLocalizer["hello"];
         }
 

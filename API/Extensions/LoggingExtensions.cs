@@ -5,22 +5,20 @@ namespace API.Extensions
 {
     public static class LoggingExtensions
     {
-        public static void AddLogger(this WebApplicationBuilder builder)
+        public static IHostBuilder ConfigureSeriLog(this IHostBuilder hostBuilder)
         {
-            builder.Host.UseSerilog((ctx, loggerConfiguration) =>
+            hostBuilder.UseSerilog((ctx, loggerConfiguration) =>
             {
-                loggerConfiguration
-                    .ReadFrom.Configuration(ctx.Configuration)
-                    .Enrich.FromLogContext()
-                    .Enrich.WithProperty("ApplicationName", typeof(Program).Assembly.GetName().Name)
-                    .Enrich.WithProperty("Environment", ctx.HostingEnvironment);
-
+                loggerConfiguration.ReadFrom.Configuration(ctx.Configuration);
+                   
             #if DEBUG
                 // Used to filter out potentially bad data due debugging.
                 // Very useful when doing Seq dashboards and want to remove logs under debugging session.
                 loggerConfiguration.Enrich.WithProperty("DebuggerAttached", Debugger.IsAttached);
             #endif
             });
+
+            return hostBuilder;
         }
     }
 }
