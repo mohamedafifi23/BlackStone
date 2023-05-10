@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Core
 {
-    internal interface IUniOfWork
+    public interface IUniOfWork
     {
     }
 }
