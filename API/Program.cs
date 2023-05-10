@@ -1,5 +1,6 @@
 using API.Extensions;
 using Microsoft.Extensions.Options;
+using Serilog;
 using System.Reflection;
 
 namespace API
@@ -20,6 +21,8 @@ namespace API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            // Register serilog services
+            builder.AddLogger();
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

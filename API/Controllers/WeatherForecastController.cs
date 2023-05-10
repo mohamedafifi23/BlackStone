@@ -42,7 +42,7 @@ namespace API.Controllers
         {
             var res = _sharedResourceLocalizer["hello"];
             //var res = _localizer2.GetString("hello").Value ?? "";
-
+            _logger.LogError(res);
             //return _sharedResourceLocalizer["hello"];
             return _sharedResourceLocalizer["hello"];
         }
