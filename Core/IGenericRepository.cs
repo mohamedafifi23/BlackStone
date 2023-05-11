@@ -9,15 +9,30 @@ namespace Core
 {
     public interface IGenericRepository<TEntity> where TEntity : class
     {
-        void Add(TEntity entity);   
-        void Update(TEntity entity);    
-        void Delete(object id);    
+        void Add(TEntity entity);
+        Task AddAsync(TEntity entity);   
+        void AddRange(IEnumerable<TEntity> entities);   
+        Task AddRangeAsync(IEnumerable<TEntity> entities);
+
         TEntity GetById(object id);
+        Task<TEntity> GetByIdAsync(object id);
         IReadOnlyList<TEntity> GetAll();
+        Task<IReadOnlyList<TEntity>> GetAllAsync();
         IReadOnlyList<TEntity> Get(
             Expression<Func<TEntity, bool>> filter = null,
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = null
             );
+        Task<IReadOnlyList<TEntity>> GetAsync(
+            Expression<Func<TEntity, bool>> filter = null,
+            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
+            string includeProperties = null
+            );
+
+        void Update(TEntity entity);    
+        void UpdateRange(IEnumerable<TEntity> entities);
+
+        void Delete(object id);    
+        void DeleteRange(IEnumerable<TEntity> entities);                  
     }
 }
