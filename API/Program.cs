@@ -57,6 +57,8 @@ internal class Program
 
             app.UseCors("corsPolicy");
 
+            app.UseAuthentication();
+
             app.UseAuthorization();
 
             app.UseRequestLocalization(app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value);
@@ -70,9 +72,10 @@ internal class Program
             var services = scope.ServiceProvider;
             var identityContext = services.GetRequiredService<AppIdentityDbContext>();
             var userManager = services.GetRequiredService<UserManager<AppUser>>();
+            var roleManager = services.GetRequiredService<RoleManager<AppUserRole>>();
 
             await identityContext.Database.MigrateAsync();
-            await AppIdentityDbContextSeed.SeedIdentityAsync(userManager);
+            await AppIdentityDbContextSeed.SeedIdentityAsync(userManager, roleManager);
 
             app.Run();
         }

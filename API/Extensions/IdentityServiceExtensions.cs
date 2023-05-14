@@ -18,8 +18,9 @@ namespace API.Extensions
             {
 
             })
+                .AddRoles<AppUserRole>()
                 .AddEntityFrameworkStores<AppIdentityDbContext>()
-                .AddSignInManager < SignInManager<AppUser>> ();
+                .AddSignInManager<SignInManager<AppUser>> ();
 
             services.AddAuthentication();
             services.AddAuthorization();    

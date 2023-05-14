@@ -10,7 +10,7 @@ namespace Infrastructure.Identity
 {
     public static class AppIdentityDbContextSeed
     {
-        public static async Task SeedIdentityAsync(UserManager<AppUser> userManager)
+        public static async Task SeedIdentityAsync(UserManager<AppUser> userManager, RoleManager<AppUserRole> roleManager)
         {
             if (!userManager.Users.Any())
             {
