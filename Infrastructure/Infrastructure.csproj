@@ -12,12 +12,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.16" />
-    <PackageReference Include="Microsoft.Entityframeworkcore.design" Version="6.0.16">
+    <PackageReference Include="Microsoft.Entityframeworkcore.design" Version="7.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Entityframeworkcore.sqlserver" Version="6.0.16" />
-    <PackageReference Include="Microsoft.Entityframeworkcore.tools" Version="6.0.16">
+    <PackageReference Include="Microsoft.Entityframeworkcore.sqlserver" Version="7.0.5" />
+    <PackageReference Include="Microsoft.Entityframeworkcore.tools" Version="7.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
