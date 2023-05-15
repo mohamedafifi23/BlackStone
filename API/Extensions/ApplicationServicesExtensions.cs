@@ -1,4 +1,7 @@
-﻿namespace API.Extensions
+﻿using Core.IServices;
+using Infrastructure.Services;
+
+namespace API.Extensions
 {
     public static class ApplicationServicesExtensions
     {
@@ -14,6 +17,8 @@
                     policy.WithOrigins(allowedHosts).AllowAnyHeader().AllowAnyMethod();
                 });
             });
+
+            services.AddScoped<ITokenService, TokenService>();
 
             return services;
         }

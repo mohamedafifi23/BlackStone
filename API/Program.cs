@@ -79,7 +79,8 @@ internal class Program
 
             app.Run();
         }
-        catch (Exception ex) when (!ex.GetType().Name.Equals("HostAbortedException", StringComparison.Ordinal))
+        catch (Exception ex) 
+        when (!ex.GetType().Name.Equals("HostAbortedException", StringComparison.Ordinal))
         {            
             if (Log.Logger == null || Log.Logger.GetType().Name == "SilentLogger")
             {

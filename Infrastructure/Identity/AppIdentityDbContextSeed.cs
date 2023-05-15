@@ -12,6 +12,22 @@ namespace Infrastructure.Identity
     {
         public static async Task SeedIdentityAsync(UserManager<AppUser> userManager, RoleManager<AppUserRole> roleManager)
         {
+            if (!roleManager.Roles.Any())
+            {
+                var roles = new List<AppUserRole>()
+                {
+                    new AppUserRole(){Name="SuperAdmin"},
+                    new AppUserRole(){Name="Admin"},
+                    new AppUserRole(){Name="Member"},
+                    new AppUserRole(){Name="Visitor"}
+                };
+
+                foreach (var role in roles)
+                {
+                    await roleManager.CreateAsync(role);
+                }
+            }
+
             if (!userManager.Users.Any())
             {
                 var appUser = new AppUser()
@@ -31,7 +47,10 @@ namespace Infrastructure.Identity
                 };
 
                 await userManager.CreateAsync(appUser, "P@$$w0rd");
-            }
+
+                await userManager.AddToRoleAsync(appUser, "SuperAdmin");
+                await userManager.AddToRoleAsync(appUser, "Member");
+            }   
         }
     }
 }
