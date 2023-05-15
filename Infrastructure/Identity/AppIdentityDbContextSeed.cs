@@ -35,6 +35,7 @@ namespace Infrastructure.Identity
                     DisplayName = "mohamed afifi",
                     UserName= "mohammedafifi153@gmail.com",
                     Email = "mohammedafifi153@gmail.com",
+                    PhoneNumber="+0101591099",
                     Address = new Address()
                     {
                         FirstName = "mohamed",

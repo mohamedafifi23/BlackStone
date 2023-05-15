@@ -1,4 +1,5 @@
 ﻿using API.Dtos;
+using API.Errors;
 using API.Extensions;
 using AutoMapper;
 using Core.Entities.Identity;
@@ -68,7 +69,7 @@ namespace API.Controllers
 
             if(result.Succeeded) return Ok(user.Address);
 
-            return BadRequest("problem updating user");    
+            return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "problem updating user"));    
         }
 
         [HttpPost("login")]
@@ -81,7 +82,7 @@ namespace API.Controllers
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password
                 , false);
 
-            if (!result.Succeeded) return Unauthorized();
+            if (!result.Succeeded) return Unauthorized(new ApiResponse(401));
 
             return Ok(new UserDto
             {
@@ -94,18 +95,29 @@ namespace API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto registerDto)
         {
-            //check email exists
+            var emailResult = await CheckEmailExistsAsync(registerDto.Email);
+            var castedemailResult = (OkObjectResult)emailResult.Result;
+            bool isEmailUsed = (bool)castedemailResult.Value;
+
+            if (isEmailUsed)
+            {
+                return new BadRequestObjectResult(new ApiValidationErrorResponse()
+                {
+                    Errors = new[] { "email address is used before" }
+                });
+            }
 
             var user = new AppUser()
             {
                 Email = registerDto.Email,
                 DisplayName = registerDto.DisplayName,
-                UserName=registerDto.Email
+                UserName = registerDto.Email,
+                PhoneNumber = registerDto.Phone
             };
 
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
-            if (!result.Succeeded) return BadRequest();
+            if (!result.Succeeded) return BadRequest(new ApiResponse(400));
 
             await _userManager.AddToRoleAsync(user, "Member");
 
