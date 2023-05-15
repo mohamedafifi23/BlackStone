@@ -18,15 +18,15 @@ namespace Infrastructure.Identity
                 {
                     DisplayName = "mohamed afifi",
                     UserName= "mohammedafifi153@gmail.com",
+                    Email = "mohammedafifi153@gmail.com",
                     Address = new Address()
                     {
                         FirstName = "mohamed",
                         MiddleName = "ashraf",
                         LastName = "afifi",
-                        Email = "mohammedafifi153@gmail.com",
                         State = "Cairo",
                         City = "5th settlement",
-                        StreetAddress = "villa 289, el-narges 2"
+                        Street = "villa 289, el-narges 2"
                     }
                 };
 
