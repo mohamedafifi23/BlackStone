@@ -1,13 +1,13 @@
 using API.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using System.Data;
 using System.Reflection;
 
 namespace API.Controllers
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class WeatherForecastController : ControllerBase
+
+    public class WeatherForecastController : BaseApiController
     {
         private static readonly string[] Summaries = new[]
         {
@@ -64,6 +64,14 @@ namespace API.Controllers
             //var res = _localizer2.GetString("hello").Value ?? "";
 
             return _sharedResourceLocalizer["hello"];
+        }
+
+        [HttpGet("testerror")]
+        public async Task<IActionResult> TestError()
+        {
+            string s = null;
+            s.ToString();
+            return Content("test");
         }
     }
 }
