@@ -45,7 +45,7 @@ namespace API.Controllers
         [HttpGet("emailexists")]
         public async Task<ActionResult<bool>> CheckEmailExistsAsync([FromQuery] string email)
         {
-            return Ok(await _userManager.FindByEmailAsync(email) != null);
+            return await _userManager.FindByEmailAsync(email) != null;
         }
 
         [Authorize]
@@ -95,11 +95,7 @@ namespace API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto registerDto)
         {
-            var emailResult = await CheckEmailExistsAsync(registerDto.Email);
-            var castedemailResult = (OkObjectResult)emailResult.Result;
-            bool isEmailUsed = (bool)castedemailResult.Value;
-
-            if (isEmailUsed)
+            if (CheckEmailExistsAsync(registerDto.Email).Result.Value)
             {
                 return new BadRequestObjectResult(new ApiValidationErrorResponse()
                 {
