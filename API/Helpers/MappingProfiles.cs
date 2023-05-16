@@ -9,7 +9,7 @@ namespace API.Helpers
         public MappingProfiles()
         {
             CreateMap<Address, AddressDto>().ReverseMap();
-                
+            CreateMap<AppUser, UserWithAddressDto>().ReverseMap();
         }
     }
 }

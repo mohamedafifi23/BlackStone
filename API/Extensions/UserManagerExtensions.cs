@@ -1,6 +1,7 @@
 ﻿using Core.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace API.Extensions
@@ -23,5 +24,12 @@ namespace API.Extensions
 
             return await userManager.FindByEmailAsync(email);
         }
+
+        public async static Task<AppUser> FindUserByEmailWithAddress(this UserManager<AppUser> userManager, 
+            [EmailAddress] string email)
+        {
+            return await userManager.Users.Include(u => u.Address)
+                .SingleOrDefaultAsync(u => u.Email == email);
+        }       
     }
 }

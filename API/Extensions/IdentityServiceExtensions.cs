@@ -1,4 +1,5 @@
-﻿using Core.Entities.Identity;
+﻿using API.Helpers.CustomTokenProviders;
+using Core.Entities.Identity;
 using Infrastructure.Data.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -19,11 +20,14 @@ namespace API.Extensions
 
             services.AddIdentityCore<AppUser>(options =>
             {
-
+                options.SignIn.RequireConfirmedEmail = true;
+                //options.Tokens.EmailConfirmationTokenProvider = "emailconfirmation";
             })
                 .AddRoles<AppUserRole>()
                 .AddEntityFrameworkStores<AppIdentityDbContext>()
-                .AddSignInManager<SignInManager<AppUser>> ();
+                .AddDefaultTokenProviders()
+                //.AddTokenProvider<EmailConfirmationTokenProvider<AppUser>>> ("emailconfirmation",)
+                .AddSignInManager<SignInManager<AppUser>>();
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>

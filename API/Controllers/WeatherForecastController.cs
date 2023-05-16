@@ -1,4 +1,6 @@
 using API.Dtos;
+using Core.IServices;
+using Core.ServiceHelpers.EmailSenderService;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using System.Data;
@@ -15,19 +17,22 @@ namespace API.Controllers
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
-        private readonly IStringLocalizer<SharedResource> _sharedResourceLocalizer;       
+        private readonly IStringLocalizer<SharedResource> _sharedResourceLocalizer;
+        private readonly IEmailSenderService _emailService;
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger,
-            IStringLocalizer<SharedResource> sharedResourceLocalizer)
+            IStringLocalizer<SharedResource> sharedResourceLocalizer, IEmailSenderService emailService)
         {
             _logger = logger;
             _sharedResourceLocalizer = sharedResourceLocalizer;
+            _emailService = emailService;
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
         public IEnumerable<WeatherForecast> Get()
         {
             _logger.LogError("kkkkkkkkh");
+            _emailService.SendEmail(new Message(new List<string> { "mohammedafifi153@gmail.com"}, "test email service", "test is successful or not"));
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
             {
                 Date = DateTime.Now.AddDays(index),
