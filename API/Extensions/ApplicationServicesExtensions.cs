@@ -1,5 +1,6 @@
 ﻿using API.Errors;
 using Core.IServices;
+using Core.ServiceHelpers.EmailSenderService;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -38,6 +39,11 @@ namespace API.Extensions
                     return new BadRequestObjectResult(errorResponse);
                 };
             });
+
+            var emailConfig = configuration.GetSection("EmailConfiguration")
+                .Get<EmailConfiguration>();
+            services.AddSingleton(emailConfig);
+            services.AddScoped<IEmailSenderService, EmailSenderService>();
 
             return services;
         }
