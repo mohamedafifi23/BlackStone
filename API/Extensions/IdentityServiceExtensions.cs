@@ -21,13 +21,18 @@ namespace API.Extensions
             services.AddIdentityCore<AppUser>(options =>
             {
                 options.SignIn.RequireConfirmedEmail = true;
-                //options.Tokens.EmailConfirmationTokenProvider = "emailconfirmation";
+                options.Tokens.EmailConfirmationTokenProvider = "emailconfirmation";
             })
                 .AddRoles<AppUserRole>()
                 .AddEntityFrameworkStores<AppIdentityDbContext>()
                 .AddDefaultTokenProviders()
-                //.AddTokenProvider<EmailConfirmationTokenProvider<AppUser>>> ("emailconfirmation",)
+                .AddTokenProvider<EmailConfirmationTokenProvider<AppUser>>("emailconfirmation")
                 .AddSignInManager<SignInManager<AppUser>>();
+
+            services.Configure<DataProtectionTokenProviderOptions>(options =>
+                           options.TokenLifespan = TimeSpan.FromHours(2));
+            services.Configure<EmailConfirmationTokenProviderOptions>(options =>
+                           options.TokenLifespan = TimeSpan.FromDays(1));
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>

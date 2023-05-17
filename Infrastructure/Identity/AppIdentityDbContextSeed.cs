@@ -50,7 +50,6 @@ namespace Infrastructure.Identity
                 await userManager.CreateAsync(appUser, "P@$$w0rd");
 
                 await userManager.AddToRoleAsync(appUser, "SuperAdmin");
-                await userManager.AddToRoleAsync(appUser, "Member");
             }   
         }
     }

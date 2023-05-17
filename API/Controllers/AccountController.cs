@@ -10,8 +10,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text;
+using System.Web;
 
 namespace API.Controllers
 {
@@ -47,7 +50,7 @@ namespace API.Controllers
             return Ok(new UserDto
             {
                 DisplayName = user.DisplayName,
-                Token = _tokenService.CreateToken(user),
+                Token = await _tokenService.CreateToken(user),
                 Email = user.Email
             });
         }
@@ -95,22 +98,22 @@ namespace API.Controllers
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password
                 , false);
             if (!result.Succeeded) return Unauthorized(new ApiResponse(401));
-
+            
             return Ok(new UserDto
             {
                 DisplayName = user.DisplayName,
-                Token = _tokenService.CreateToken(user),
+                Token = await _tokenService.CreateToken(user),
                 Email = user.Email
             });
         }
 
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout()
-        {
-            await _signInManager.SignOutAsync();
+        //[HttpGet("logout")]
+        //public async Task<IActionResult> Logout()
+        //{
+        //    Response.Headers.Remove("Authorization");
             
-            return Ok("user signed out");
-        }
+        //    return Ok("user signed out");
+        //}
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto registerDto)
@@ -138,7 +141,14 @@ namespace API.Controllers
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            var confirmationLink = Url.ActionLink("confirmemail", "account", new { email = user.Email, token, Request.Scheme });
+            //var confirmationLink = Url.ActionLink("confirmemail", "account", new { email = user.Email, token, Request.Scheme });
+            Dictionary<string, string> queryParams = new Dictionary<string, string>
+            {
+                {"email", user.Email},
+                {"token", token }
+            };
+
+            var confirmationLink = QueryHelpers.AddQueryString(registerDto.ClientURI, queryParams);
             
             _logger.LogInformation(confirmationLink);
 
@@ -146,13 +156,12 @@ namespace API.Controllers
             await _emailService.SendEmailAsync(message);
 
             await _userManager.AddToRoleAsync(user, "Visitor");
-
             
             return Ok("Please check your email for the verification action.");
         }
 
         [HttpGet("confirmemail")]
-        public async Task<IActionResult> ConfirmEmail(string email, string token)
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string email, [FromQuery] string token)
         {
             var user = await _userManager.FindByEmailAsync(email);
 
@@ -174,11 +183,11 @@ namespace API.Controllers
             return Ok($"Thank you for confirming your email.");
         }
 
-        [Authorize]
-        [HttpPost("deleteuser")]
+        [Authorize(Roles = "SuperAdmin,Admin")]
+        [HttpDelete("deleteuser")]
         public async Task<IActionResult> DeleteMember(string email)
         {
-            var user = await _userManager.FindUserByEmailWithAddress(email);
+            var user = await _userManager.FindByEmailAsync(email);
 
             if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
 
@@ -195,6 +204,9 @@ namespace API.Controllers
         {
             var user = await _userManager.FindByEmailFromClaimsPrincipal(User);
 
+            var checkPassword = await _userManager.CheckPasswordAsync(user, changePasswordDto.NewPassword);
+            if (checkPassword) return BadRequest(new ApiResponse(400, "New password must be different from the old password."));
+
             var result = await _userManager.ChangePasswordAsync(user, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
 
             if (!result.Succeeded) return BadRequest(new ApiValidationErrorResponse()
@@ -203,31 +215,39 @@ namespace API.Controllers
             return Ok("Password changed successfully");
         }
 
-        [HttpGet("forgetpassword")]
-        public async Task<IActionResult> ForgetPassword(ForgetPasswordDto forgetPasswordDto)
+        [HttpPost("forgetpassword")]
+        public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordDto forgetPasswordDto)
         {
             var user = await _userManager.FindByEmailAsync(forgetPasswordDto.Email);
 
             if (user is null) return BadRequest(new ApiResponse(400, "user not found."));
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);          
+            _logger.LogInformation(token);
 
-            var resetpasswordLink = Url.ActionLink("resetpassword", "account", new { email = user.Email, token, Request.Scheme });
+            Dictionary<string, string> param = new Dictionary<string, string>
+            {
+                ["email"] = forgetPasswordDto.Email,
+                ["token"] = token
+            };
+            var resetpasswordLink = QueryHelpers.AddQueryString(forgetPasswordDto.ClientURI, param);
 
             _logger.LogInformation(resetpasswordLink);
 
             var message = new Message(new List<string> { user.Email }, "BlackStone reset password link", resetpasswordLink);
             await _emailService.SendEmailAsync(message);
 
-            return Ok();
+            return Ok("Please check your email for the verification action.");
         }
 
         [HttpPost("resetpassword")]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordDto resetPasswordDto)
         {
             var user = await _userManager.FindByEmailAsync(resetPasswordDto.Email);
             if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
+
+            resetPasswordDto.Token=HttpUtility.UrlDecode(resetPasswordDto.Token);
+            _logger.LogInformation(resetPasswordDto.Token); 
 
             var resetPassResult = await _userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
             if (!resetPassResult.Succeeded) return BadRequest(new ApiValidationErrorResponse()
@@ -236,7 +256,7 @@ namespace API.Controllers
             return Ok("password reset successfully");
         }
 
-        //[Authorize]
+        [Authorize(Roles = "SuperAdmin,Admin")]
         [HttpGet("getusers")]
         public async Task<IActionResult> GetUsers()
         {

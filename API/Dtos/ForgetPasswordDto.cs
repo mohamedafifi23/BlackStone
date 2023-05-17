@@ -6,6 +6,10 @@ namespace API.Dtos
     {
         [Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public string? Email { get; set; }
+
+        [Required]
+        [Url]
+        public string? ClientURI { get; set; }
     }
 }
