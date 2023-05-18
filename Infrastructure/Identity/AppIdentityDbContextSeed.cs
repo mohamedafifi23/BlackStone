@@ -49,6 +49,10 @@ namespace Infrastructure.Identity
 
                 await userManager.CreateAsync(appUser, "P@$$w0rd");
 
+                appUser.EmailConfirmed = true;
+                appUser.PhoneNumberConfirmed=true;
+                await userManager.UpdateAsync(appUser);
+
                 await userManager.AddToRoleAsync(appUser, "SuperAdmin");
             }   
         }

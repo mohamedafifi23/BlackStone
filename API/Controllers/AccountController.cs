@@ -26,11 +26,10 @@ namespace API.Controllers
         private readonly IMapper _mapper;
         private readonly IEmailSenderService _emailService;
         private readonly ILogger<AccountController> _logger;
-        private readonly IConfiguration _config;
 
         public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager
             , ITokenService tokenService, IMapper mapper, IEmailSenderService emailService
-            , ILogger<AccountController> logger, IConfiguration config)
+            , ILogger<AccountController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -38,7 +37,6 @@ namespace API.Controllers
             _mapper = mapper;
             _emailService = emailService;
             _logger = logger;
-            _config = config;
         }
 
         [Authorize]
@@ -47,11 +45,14 @@ namespace API.Controllers
         {
             var user = await _userManager.FindByEmailFromClaimsPrincipal(User);
 
-            return Ok(new UserDto
+            return Ok(new ApiOkResponse<UserDto>(200)
             {
-                DisplayName = user.DisplayName,
-                Token = await _tokenService.CreateToken(user),
-                Email = user.Email
+                Data = new UserDto
+                {
+                    DisplayName = user.DisplayName,
+                    Token = await _tokenService.CreateToken(user),
+                    Email = user.Email
+                }
             });
         }
         
