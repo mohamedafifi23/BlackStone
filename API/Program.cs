@@ -1,3 +1,4 @@
+using API;
 using API.Errors;
 using API.Extensions;
 using API.Middlewares;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -82,9 +84,11 @@ internal class Program
             var identityContext = services.GetRequiredService<AppIdentityDbContext>();
             var userManager = services.GetRequiredService<UserManager<AppUser>>();
             var roleManager = services.GetRequiredService<RoleManager<AppUserRole>>();
+            var sharedLocalizer = services.GetRequiredService<IStringLocalizer<SharedResource>>();
 
             await identityContext.Database.MigrateAsync();
             await AppIdentityDbContextSeed.SeedIdentityAsync(userManager, roleManager);
+            ApiResponse.SetLocalizer(sharedLocalizer);
 
             app.Run();
         }

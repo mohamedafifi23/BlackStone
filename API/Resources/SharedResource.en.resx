@@ -117,6 +117,39 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="200" xml:space="preserve">
+    <value>Ok, you made it</value>
+  </data>
+  <data name="201" xml:space="preserve">
+    <value>Created, you made it</value>
+  </data>
+  <data name="400" xml:space="preserve">
+    <value>bad request, you made</value>
+  </data>
+  <data name="401" xml:space="preserve">
+    <value>Authorized, you are not authorized</value>
+  </data>
+  <data name="403" xml:space="preserve">
+    <value>Forbidden, you are not authorized to see this</value>
+  </data>
+  <data name="404" xml:space="preserve">
+    <value>Resource found, it was not found</value>
+  </data>
+  <data name="405" xml:space="preserve">
+    <value>Method not allowed, you are not allowed to use this method</value>
+  </data>
+  <data name="409" xml:space="preserve">
+    <value>Conflict, there is a conflict</value>
+  </data>
+  <data name="415" xml:space="preserve">
+    <value>Unsupported media type, this media type is not supported</value>
+  </data>
+  <data name="422" xml:space="preserve">
+    <value>Unprocessable entity, this entity is not processable</value>
+  </data>
+  <data name="500" xml:space="preserve">
+    <value>Something went wrong and we are going to solve it</value>
+  </data>
   <data name="hello" xml:space="preserve">
     <value>Hello</value>
   </data>

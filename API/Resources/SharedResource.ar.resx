@@ -117,6 +117,39 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="200" xml:space="preserve">
+    <value>تم تنفيذ الطلب بنجاح</value>
+  </data>
+  <data name="201" xml:space="preserve">
+    <value>تمت الإضافة بنجاح</value>
+  </data>
+  <data name="400" xml:space="preserve">
+    <value>لقد قمت بإرسال بيانات غير مفهومة</value>
+  </data>
+  <data name="401" xml:space="preserve">
+    <value>انت غير مسجل</value>
+  </data>
+  <data name="403" xml:space="preserve">
+    <value>غير مسموح لك بالدخول إلى هذه الصفحة</value>
+  </data>
+  <data name="404" xml:space="preserve">
+    <value>ما قمت بطلبه غير موجود</value>
+  </data>
+  <data name="405" xml:space="preserve">
+    <value>غير مسموح بالدخول إلى هذه الدالة</value>
+  </data>
+  <data name="409" xml:space="preserve">
+    <value>حدث تضارب فى البيانات</value>
+  </data>
+  <data name="415" xml:space="preserve">
+    <value>هذا النوع من البيانات غير مدعوم</value>
+  </data>
+  <data name="422" xml:space="preserve">
+    <value>لا يمكن معالجة المعلومات التى أرسلتها</value>
+  </data>
+  <data name="500" xml:space="preserve">
+    <value>عذراً لقد حظث خطأ ما و جارى العمل على لإصلاحه</value>
+  </data>
   <data name="hello" xml:space="preserve">
     <value>أهلا</value>
   </data>
