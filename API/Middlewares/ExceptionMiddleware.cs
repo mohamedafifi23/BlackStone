@@ -41,7 +41,6 @@ namespace API.Middlewares
                 ? new ApiException(StatusCodes.Status500InternalServerError, ex.Message, ex.StackTrace.ToString())
                 : new ApiException(StatusCodes.Status500InternalServerError);
 
-            //context.Response.WriteAsJsonAsync(response);
             var serializeOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase

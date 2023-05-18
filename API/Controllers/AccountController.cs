@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
 using System.Security.Claims;
 using System.Text;
 using System.Web;
@@ -26,10 +27,11 @@ namespace API.Controllers
         private readonly IMapper _mapper;
         private readonly IEmailSenderService _emailService;
         private readonly ILogger<AccountController> _logger;
+        private readonly IStringLocalizer<SharedResource> _sharedResStrLocalizer;
 
         public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager
             , ITokenService tokenService, IMapper mapper, IEmailSenderService emailService
-            , ILogger<AccountController> logger)
+            , ILogger<AccountController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -37,6 +39,7 @@ namespace API.Controllers
             _mapper = mapper;
             _emailService = emailService;
             _logger = logger;
+            _sharedResStrLocalizer = sharedResStrLocalizer;
         }
 
         [Authorize]
@@ -45,7 +48,7 @@ namespace API.Controllers
         {
             var user = await _userManager.FindByEmailFromClaimsPrincipal(User);
 
-            return Ok(new ApiOkResponse<UserDto>(200)
+            return Ok(new ApiSuccessResponse<UserDto>(200)
             {
                 Data = new UserDto
                 {
@@ -67,8 +70,11 @@ namespace API.Controllers
         public async Task<IActionResult> GetUserAddress()
         {
             var user = await _userManager.FindUserByClaimsPrincipalWithAddress(User);
-            
-            return Ok(_mapper.Map<Address, AddressDto>(user.Address));
+
+            return Ok(new ApiSuccessResponse<AddressDto>(200)
+            {
+                Data= _mapper.Map<Address, AddressDto>(user.Address)
+            });
         }
 
         [Authorize]
@@ -81,8 +87,11 @@ namespace API.Controllers
 
             var result = await _userManager.UpdateAsync(user);
 
-            if(result.Succeeded) return Ok(user.Address);
-
+            if(result.Succeeded) return Ok(new ApiSuccessResponse<AddressDto>(200)
+            {
+                Data= _mapper.Map<Address, AddressDto>(user.Address)
+            });
+ 
             return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "problem updating user"));    
         }
 
@@ -92,19 +101,22 @@ namespace API.Controllers
             var user = await _userManager.FindByEmailAsync(loginDto.Email);
 
             if (user == null) return Unauthorized(new ApiResponse(401));
-
+ 
             var isEmailConfirmed = await _userManager.IsEmailConfirmedAsync(user);
-            if (!isEmailConfirmed) return Unauthorized(new ApiResponse(401,"you can not sign in without confirm your email"));
+            if (!isEmailConfirmed) return StatusCode(403, new ApiResponse(
+                403, _sharedResStrLocalizer["login_unconfirmedemail"]));
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password
-                , false);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
             if (!result.Succeeded) return Unauthorized(new ApiResponse(401));
-            
-            return Ok(new UserDto
+
+            return Ok(new ApiSuccessResponse<UserDto>(200)
             {
-                DisplayName = user.DisplayName,
-                Token = await _tokenService.CreateToken(user),
-                Email = user.Email
+                Data = new UserDto
+                {
+                    DisplayName = user.DisplayName,
+                    Token = await _tokenService.CreateToken(user),
+                    Email = user.Email
+                }
             });
         }
 
@@ -142,7 +154,6 @@ namespace API.Controllers
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            //var confirmationLink = Url.ActionLink("confirmemail", "account", new { email = user.Email, token, Request.Scheme });
             Dictionary<string, string> queryParams = new Dictionary<string, string>
             {
                 {"email", user.Email},
@@ -157,8 +168,16 @@ namespace API.Controllers
             await _emailService.SendEmailAsync(message);
 
             await _userManager.AddToRoleAsync(user, "Visitor");
-            
-            return Ok("Please check your email for the verification action.");
+           
+            return CreatedAtAction("register", "account", new ApiSuccessResponse<UserDto>(201, "Please check your email for the verification action.")
+            {
+                Data = new UserDto
+                {
+                    DisplayName = user.DisplayName,
+                    Token = null,
+                    Email = user.Email
+                }
+            });           
         }
 
         [HttpGet("confirmemail")]
@@ -168,20 +187,28 @@ namespace API.Controllers
 
             if (user == null) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
 
+            if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
+
             var identityResult = await _userManager.ConfirmEmailAsync(user, token);
 
             if (!identityResult.Succeeded) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
 
-            var removeRoleResult = await _userManager.RemoveFromRoleAsync(user, "Visitor");
-            
-            if (!removeRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
-                new ApiResponse(StatusCodes.Status500InternalServerError));
+            if(await _userManager.IsInRoleAsync(user, "Visitor"))
+            {
+                var removeRoleResult = await _userManager.RemoveFromRoleAsync(user, "Visitor");
 
-            var memberRoleResult = await _userManager.AddToRoleAsync(user, "Member");
-            if (!memberRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
-                new ApiResponse(StatusCodes.Status500InternalServerError));
+                if (!removeRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ApiResponse(StatusCodes.Status500InternalServerError));
+            }
 
-            return Ok($"Thank you for confirming your email.");
+            if(!await _userManager.IsInRoleAsync(user, "Member"))
+            {
+                var memberRoleResult = await _userManager.AddToRoleAsync(user, "Member");
+                if (!memberRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ApiResponse(StatusCodes.Status500InternalServerError));
+            }
+
+            return NoContent();
         }
 
         [Authorize(Roles = "SuperAdmin,Admin")]
@@ -196,7 +223,10 @@ namespace API.Controllers
 
             if (!result.Succeeded) return BadRequest(new ApiResponse(400));
 
-            return Ok("user is deleted successfully.");
+            return Ok(new ApiSuccessResponse<Dictionary<string, string>>(200, "user deleted successfully")
+            {
+                Data=new Dictionary<string, string> { {"email",  email} }
+            });
         }
 
         [Authorize]
@@ -213,7 +243,7 @@ namespace API.Controllers
             if (!result.Succeeded) return BadRequest(new ApiValidationErrorResponse()
                     { Errors = result.Errors.Select(e => e.Description) });
 
-            return Ok("Password changed successfully");
+            return Ok(new ApiResponse(200, "Password changed successfully", true));
         }
 
         [HttpPost("forgetpassword")]
@@ -238,7 +268,7 @@ namespace API.Controllers
             var message = new Message(new List<string> { user.Email }, "BlackStone reset password link", resetpasswordLink);
             await _emailService.SendEmailAsync(message);
 
-            return Ok("Please check your email for the verification action.");
+            return Ok(new ApiResponse(200, "Please check your email for the verification action.", true));
         }
 
         [HttpPost("resetpassword")]
@@ -254,7 +284,7 @@ namespace API.Controllers
             if (!resetPassResult.Succeeded) return BadRequest(new ApiValidationErrorResponse()
             { Errors = resetPassResult.Errors.Select(e => e.Description) });
 
-            return Ok("password reset successfully");
+            return Ok(new ApiResponse(200, "password reset successfully", true));
         }
 
         [Authorize(Roles = "SuperAdmin,Admin")]
@@ -263,7 +293,10 @@ namespace API.Controllers
         {
             var users = await _userManager.Users.Include(u => u.Address).ToListAsync();
 
-            return Ok(_mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users));
+            return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>
+            {
+                Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users)
+            });
         }
     }
 }

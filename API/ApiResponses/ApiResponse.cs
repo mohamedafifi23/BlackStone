@@ -1,4 +1,7 @@
-﻿namespace API.Errors
+﻿using API.Controllers;
+using Microsoft.Extensions.Localization;
+
+namespace API.Errors
 {
     public class ApiResponse
     {
@@ -10,7 +13,7 @@
         {
             StatusCode = statusCode;
             Message = message ?? GetDefaultMessage(statusCode);
-            Success = success;
+            Success = success;           
         }
 
         private string? GetDefaultMessage(int statusCode)
@@ -19,7 +22,6 @@
             {
                 200 => "Ok, you made it",
                 201 => "Created, you made it",
-                204 => "No content, you made it",
                 400 => "bad request, you made",
                 401 => "Authorized, you are not authorized",
                 403 => "Forbidden, you are not authorized to see this",

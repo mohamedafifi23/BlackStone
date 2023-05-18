@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -64,7 +65,7 @@ internal class Program
             app.UseHttpsRedirection();
 
             app.UseCors("corsPolicy");
-
+            
             app.UseAuthentication();
 
             app.UseAuthorization();

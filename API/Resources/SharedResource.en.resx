@@ -120,6 +120,9 @@
   <data name="hello" xml:space="preserve">
     <value>Hello</value>
   </data>
+  <data name="login_unconfirmedemail" xml:space="preserve">
+    <value>you can not sign in without confirm your email</value>
+  </data>
   <data name="Name" xml:space="preserve">
     <value>Name</value>
   </data>

@@ -120,6 +120,9 @@
   <data name="hello" xml:space="preserve">
     <value>أهلا</value>
   </data>
+  <data name="login_unconfirmedemail" xml:space="preserve">
+    <value>لا يمكنك تسجيل الدخول إلا بعد تفعيل حسابك. برجاء التوجه إلى بريدك الالكترونى لتفعيل الحساب</value>
+  </data>
   <data name="Name" xml:space="preserve">
     <value>اسم</value>
   </data>
