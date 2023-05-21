@@ -6,13 +6,16 @@ using Azure;
 using Core.Entities.Identity;
 using Core.IServices;
 using Core.ServiceHelpers.EmailSenderService;
+using Infrastructure.Data.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text;
 using System.Web;
@@ -28,10 +31,12 @@ namespace API.Controllers
         private readonly IEmailSenderService _emailService;
         private readonly ILogger<AccountController> _logger;
         private readonly IStringLocalizer<SharedResource> _sharedResStrLocalizer;
+        private readonly IOtpService _otpService;
 
         public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager
             , ITokenService tokenService, IMapper mapper, IEmailSenderService emailService
-            , ILogger<AccountController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer)
+            , ILogger<AccountController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer
+            ,IOtpService otpService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -40,6 +45,7 @@ namespace API.Controllers
             _emailService = emailService;
             _logger = logger;
             _sharedResStrLocalizer = sharedResStrLocalizer;
+            _otpService = otpService;
         }
 
         [Authorize]
@@ -129,8 +135,13 @@ namespace API.Controllers
         //}
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterDto registerDto)
+        public async Task<IActionResult> Register(RegisterDto registerDto, [FromQuery] [Url] string clientURI)
         {
+            if (clientURI == null) return BadRequest(new ApiValidationErrorResponse()
+            {
+                Errors = new List<string> { "you must enter client Url" }
+            });
+
             if (CheckEmailExistsAsync(registerDto.Email).Result.Value)
             {
                 return new BadRequestObjectResult(new ApiValidationErrorResponse()
@@ -160,7 +171,7 @@ namespace API.Controllers
                 {"token", token }
             };
 
-            var confirmationLink = QueryHelpers.AddQueryString(registerDto.ClientURI, queryParams);
+            var confirmationLink = QueryHelpers.AddQueryString(clientURI, queryParams);
             
             _logger.LogInformation(confirmationLink);
 
@@ -181,7 +192,7 @@ namespace API.Controllers
         }
 
         [HttpGet("confirmemail")]
-        public async Task<IActionResult> ConfirmEmail([FromQuery] string email, [FromQuery] string token)
+        public async Task<IActionResult> ConfirmEmail([FromQuery][EmailAddress] string email, [FromQuery] string token)
         {
             var user = await _userManager.FindByEmailAsync(email);
 
@@ -193,7 +204,7 @@ namespace API.Controllers
 
             if (!identityResult.Succeeded) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
 
-            if(await _userManager.IsInRoleAsync(user, "Visitor"))
+            if (await _userManager.IsInRoleAsync(user, "Visitor"))
             {
                 var removeRoleResult = await _userManager.RemoveFromRoleAsync(user, "Visitor");
 
@@ -201,13 +212,133 @@ namespace API.Controllers
                     new ApiResponse(StatusCodes.Status500InternalServerError));
             }
 
-            if(!await _userManager.IsInRoleAsync(user, "Member"))
+            if (!await _userManager.IsInRoleAsync(user, "Member"))
             {
                 var memberRoleResult = await _userManager.AddToRoleAsync(user, "Member");
                 if (!memberRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
                     new ApiResponse(StatusCodes.Status500InternalServerError));
             }
 
+            return NoContent();
+        }
+
+        [HttpGet("resendconfirmemailtoken")]
+        public async Task<IActionResult> ResendTokenToVerifyEmail(ForgetPasswordDto forgetPasswordDto)
+        {
+            var user = await _userManager.FindByEmailAsync(forgetPasswordDto.Email);
+
+            if (user == null) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
+
+            if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+            Dictionary<string, string> queryParams = new Dictionary<string, string>
+            {
+                {"email", user.Email},
+                {"token", token }
+            };
+
+            var confirmationLink = QueryHelpers.AddQueryString(forgetPasswordDto.ClientURI, queryParams);
+
+            _logger.LogInformation(confirmationLink);
+
+            var message = new Message(new List<string> { user.Email }, "BlackStone confirmation email link", confirmationLink);
+            await _emailService.SendEmailAsync(message);
+
+            return Ok(new ApiResponse(200, success: true));
+        }
+
+
+        [HttpPost("registerotp")]
+        public async Task<IActionResult> RegisterOtp(RegisterDto registerDto)
+        {
+            if (CheckEmailExistsAsync(registerDto.Email).Result.Value)
+            {
+                return new BadRequestObjectResult(new ApiValidationErrorResponse()
+                {
+                    Errors = new[] { "email address is used before" }
+                });
+            }
+
+            var user = new AppUser()
+            {
+                Email = registerDto.Email,
+                DisplayName = registerDto.DisplayName,
+                UserName = registerDto.Email,
+                PhoneNumber = registerDto.Phone
+            };
+
+            var result = await _userManager.CreateAsync(user, registerDto.Password);
+
+            if (!result.Succeeded) return BadRequest(new ApiResponse(400));
+
+            var otp = _otpService.GenerateRandomNumericOTP();
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
+            await _otpService.SendMailOtpAsync(user.Email, "BlackStone confirmation email link", mailOtp.Otp);
+                        
+            await _userManager.AddToRoleAsync(user, "Visitor");
+
+            return CreatedAtAction("register", "account", new ApiSuccessResponse<UserDto>(201, "Please check your email for the verification action.")
+            {
+                Data = new UserDto
+                {
+                    DisplayName = user.DisplayName,
+                    Token = null,
+                    Email = user.Email
+                }
+            });
+        }
+
+        [HttpGet("resendconfirmemailotp")]
+        public async Task<IActionResult> ResendOtpToVerifyEmail([EmailAddress] string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
+
+            if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
+
+            var otp = _otpService.GenerateRandomNumericOTP();
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
+            await _otpService.SendMailOtpAsync(user.Email, "BlackStone confirmation email link", mailOtp.Otp);
+
+            return Ok(new ApiResponse(200, success: true));
+        }
+
+        [HttpPost("confirmemailotp")]
+        public async Task<IActionResult> ConfirmEmailOtp([FromBody] ConfirmEmailOtpDto confirmEmailOtpDto)
+        {
+            var user = await _userManager.FindByEmailAsync(confirmEmailOtpDto.Email);
+
+            if (user == null) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
+
+            if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
+
+            MailOtp valifMailOtp = await _otpService.VerifyUserMailOtpAsync(confirmEmailOtpDto.Email, confirmEmailOtpDto.Otp);
+            if (string.IsNullOrEmpty(valifMailOtp.Token)) return BadRequest(new ApiResponse(400, "your email is not verified. check correctness of entered otp or it will be expired."));
+
+            var identityResult = await _userManager.ConfirmEmailAsync(user, valifMailOtp.Token);
+            if (!identityResult.Succeeded) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
+
+            if (await _userManager.IsInRoleAsync(user, "Visitor"))
+            {
+                var removeRoleResult = await _userManager.RemoveFromRoleAsync(user, "Visitor");
+
+                if (!removeRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ApiResponse(StatusCodes.Status500InternalServerError));
+            }
+
+            if (!await _userManager.IsInRoleAsync(user, "Member"))
+            {
+                var memberRoleResult = await _userManager.AddToRoleAsync(user, "Member");
+                if (!memberRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ApiResponse(StatusCodes.Status500InternalServerError));
+            }
+
+            await _otpService.DeleteUserVerifiedOtpAsync(confirmEmailOtpDto.Email, confirmEmailOtpDto.Otp);
             return NoContent();
         }
 
@@ -253,6 +384,8 @@ namespace API.Controllers
 
             if (user is null) return BadRequest(new ApiResponse(400, "user not found."));
 
+            if (!user.EmailConfirmed) return BadRequest(new ApiResponse(400, "confirm your email to reset password"));
+
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);          
             _logger.LogInformation(token);
 
@@ -276,13 +409,51 @@ namespace API.Controllers
         {
             var user = await _userManager.FindByEmailAsync(resetPasswordDto.Email);
             if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
-
-            resetPasswordDto.Token=HttpUtility.UrlDecode(resetPasswordDto.Token);
-            _logger.LogInformation(resetPasswordDto.Token); 
+            
+            resetPasswordDto.Token = HttpUtility.UrlDecode(resetPasswordDto.Token);
+            _logger.LogInformation(resetPasswordDto.Token);
 
             var resetPassResult = await _userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
             if (!resetPassResult.Succeeded) return BadRequest(new ApiValidationErrorResponse()
             { Errors = resetPassResult.Errors.Select(e => e.Description) });
+
+            return Ok(new ApiResponse(200, "password reset successfully", true));
+        }
+
+        [HttpPost("forgetpasswordotp")]
+        public async Task<IActionResult> ForgetPasswordOtp([FromBody] ForgetPasswordOtpDto forgetPasswordOtpDto)
+        {
+            var user = await _userManager.FindByEmailAsync(forgetPasswordOtpDto.Email);
+
+            if (user is null) return BadRequest(new ApiResponse(400, "user not found."));
+
+            if (!await _userManager.IsEmailConfirmedAsync(user)) return BadRequest(new ApiResponse(400, "confirm your email to reset password"));
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var otp = _otpService.GenerateRandomNumericOTP();
+            MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
+
+            bool emailSent = await _otpService.SendMailOtpAsync(user.Email, "BlackStone reset password link", mailOtp.Otp);
+            if (emailSent)
+                return Ok(new ApiResponse(200, "Please check your email for the verification action.", true));
+            
+            return BadRequest(new ApiResponse(400, "something went wrong when sending verfication OTP"));
+        }
+
+        [HttpPost("resetpasswordotp")]
+        public async Task<IActionResult> ResetPasswordOtp(ResetPasswordOtpDto resetPasswordOtpDto)
+        {
+            var user = await _userManager.FindByEmailAsync(resetPasswordOtpDto.Email);
+            if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
+            
+            var validMailOtp = await _otpService.VerifyUserMailOtpAsync(resetPasswordOtpDto.Email, resetPasswordOtpDto.Otp);
+            if (string.IsNullOrEmpty(validMailOtp.Token)) return BadRequest(new ApiResponse(400, "your email is not verified. check correctness of entered otp or it will be expired."));
+
+            var resetPassResult = await _userManager.ResetPasswordAsync(user, validMailOtp.Token, resetPasswordOtpDto.Password);
+            if (!resetPassResult.Succeeded) return BadRequest(new ApiValidationErrorResponse()
+            { Errors = resetPassResult.Errors.Select(e => e.Description) });
+
+            await _otpService.DeleteUserVerifiedOtpAsync(validMailOtp.Email, validMailOtp.Otp);
 
             return Ok(new ApiResponse(200, "password reset successfully", true));
         }

@@ -44,6 +44,7 @@ namespace API.Extensions
                 .Get<EmailConfiguration>();
             services.AddSingleton(emailConfig);
             services.AddScoped<IEmailSenderService, EmailSenderService>();
+            services.AddScoped<IOtpService, OtpService>();
 
             return services;
         }

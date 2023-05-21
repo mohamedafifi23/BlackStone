@@ -28,7 +28,7 @@ namespace Infrastructure
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            _context.Dispose();
         }
 
         public IGenericRepository<TEntity> Repository<TEntity>() where TEntity : BaseEntity

@@ -22,7 +22,7 @@ namespace API.Middlewares
                 if (context.Response.StatusCode == StatusCodes.Status204NoContent)
                 {
                     context.Response.ContentType = "application/json";
-                    //if status code not changed, it will throw an exception "you can not write on body of no content response"
+                    //if status code still 204, it will throw an exception "you can not write on body of no content response"
                     context.Response.StatusCode = StatusCodes.Status200OK;   
                     await context.Response.WriteAsJsonAsync(new ApiResponse(200,success: true));
                 }

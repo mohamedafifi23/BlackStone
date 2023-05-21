@@ -64,6 +64,9 @@ internal class Program
 
             app.UseSerilogRequestLogging();
 
+            app.UseMiddleware<MethodNotAllowedMiddleware>();
+            app.UseMiddleware<NoContentMiddleware>();
+
             app.UseHttpsRedirection();
 
             app.UseCors("corsPolicy");
