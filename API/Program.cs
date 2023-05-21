@@ -1,6 +1,7 @@
 using API;
 using API.Errors;
 using API.Extensions;
+using API.Helpers;
 using API.Middlewares;
 using Core.Entities.Identity;
 using Infrastructure.Data.Identity;
@@ -79,9 +80,9 @@ internal class Program
 
             app.MapControllers();
 
-            Log.Information("Starting the application");
 
-            //migrate db & seed data
+            
+            Log.Information("Migrate database, seed sata & resolve some services.");
             using var scope = app.Services.CreateScope();
             var services = scope.ServiceProvider;
             var identityContext = services.GetRequiredService<AppIdentityDbContext>();
@@ -92,7 +93,9 @@ internal class Program
             await identityContext.Database.MigrateAsync();
             await AppIdentityDbContextSeed.SeedIdentityAsync(userManager, roleManager);
             ApiResponse.SetLocalizer(sharedLocalizer);
+            LocalizerManager.SetLocalizer(sharedLocalizer);
 
+            Log.Information("Starting the application");
             app.Run();
         }
         catch (Exception ex) 
