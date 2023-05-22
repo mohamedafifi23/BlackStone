@@ -1,6 +1,7 @@
 ﻿using API.Errors;
 using Core.IServices;
 using Core.ServiceHelpers.EmailSenderService;
+using Core.ServiceHelpers.PaymentService;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -44,6 +45,12 @@ namespace API.Extensions
                 .Get<EmailConfiguration>();
             services.AddSingleton(emailConfig);
             services.AddScoped<IEmailSenderService, EmailSenderService>();
+
+            var paymobConfig = configuration.GetSection("PaymobConfiguration")
+                .Get<PaymobConfiguration>();
+            services.AddSingleton(paymobConfig);
+            services.AddScoped<IPaymentService, PaymentService>();            
+
             services.AddScoped<IOtpService, OtpService>();
 
             return services;

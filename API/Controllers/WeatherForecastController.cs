@@ -19,13 +19,16 @@ namespace API.Controllers
         private readonly ILogger<WeatherForecastController> _logger;
         private readonly IStringLocalizer<SharedResource> _sharedResourceLocalizer;
         private readonly IEmailSenderService _emailService;
+        private readonly IPaymentService _paymentService;
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger,
-            IStringLocalizer<SharedResource> sharedResourceLocalizer, IEmailSenderService emailService)
+            IStringLocalizer<SharedResource> sharedResourceLocalizer, IEmailSenderService emailService
+            , IPaymentService paymentService)
         {
             _logger = logger;
             _sharedResourceLocalizer = sharedResourceLocalizer;
             _emailService = emailService;
+            _paymentService = paymentService;
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
@@ -78,5 +81,13 @@ namespace API.Controllers
             s.ToString();
             return Content("test");
         }
+
+        [HttpGet("GetPaymobToken")]
+        public async Task<IActionResult> GetPaymobToken()
+        {
+            var token = await _paymentService.GetPaymentToken();
+            return Ok(token);
+        }
+
     }
 }
