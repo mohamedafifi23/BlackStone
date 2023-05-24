@@ -35,8 +35,8 @@ namespace Infrastructure.Services
         {
             int orderPriceInCents = 9898*100;
 
-            string authToken = await CreateAuthenticationToken();
-            string orderId = await RegisterPaymentOrder(authToken, orderPriceInCents);
+            var authToken = await CreateAuthenticationToken();
+            var orderId = await RegisterPaymentOrder(authToken, orderPriceInCents);
             
             return await CreatePaymentToken(authToken, orderId, orderPriceInCents);
         }
@@ -62,7 +62,7 @@ namespace Infrastructure.Services
         {
             string orderId = "";
 
-            _httpClient.BaseAddress = new Uri(_paymobConfig.BaseUrl);
+            //_httpClient.BaseAddress = new Uri(_paymobConfig.BaseUrl);
             var jsonApiKey = new
             {
                 auth_token = authToken,
@@ -71,12 +71,13 @@ namespace Infrastructure.Services
                 currency = "EGP",
                 items = new List<string>()
             };
-        var response = await _httpClient.PostAsJsonAsync("auth/tokens", jsonApiKey);
+        var response = await _httpClient.PostAsJsonAsync("ecommerce/orders", jsonApiKey);
 
             if (response.IsSuccessStatusCode)
             {
+                //var res1 = await response.Content.ReadAsStringAsync();
                 var res = await response.Content.ReadFromJsonAsync<RegisteredPaymentOrder>();
-                orderId = res.OrderId;
+                orderId = res.Id.ToString();
             }
 
             return orderId;
@@ -86,7 +87,7 @@ namespace Infrastructure.Services
         {
             string paymentToken = "";
 
-            _httpClient.BaseAddress = new Uri(_paymobConfig.BaseUrl);
+            //_httpClient.BaseAddress = new Uri(_paymobConfig.BaseUrl);
             var jsonApiKey = new
             {
                 auth_token = authToken,
@@ -112,7 +113,7 @@ namespace Infrastructure.Services
                 currency = "EGP",
                 integration_id = _paymobConfig.IntegrationId
             };
-        var response = await _httpClient.PostAsJsonAsync("auth/tokens", jsonApiKey);
+        var response = await _httpClient.PostAsJsonAsync("acceptance/payment_keys", jsonApiKey);
 
             if (response.IsSuccessStatusCode)
             {

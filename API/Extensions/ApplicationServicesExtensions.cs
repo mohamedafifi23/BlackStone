@@ -49,6 +49,7 @@ namespace API.Extensions
             var paymobConfig = configuration.GetSection("PaymobConfiguration")
                 .Get<PaymobConfiguration>();
             services.AddSingleton(paymobConfig);
+            services.AddHttpClient();
             services.AddScoped<IPaymentService, PaymentService>();            
 
             services.AddScoped<IOtpService, OtpService>();

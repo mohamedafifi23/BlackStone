@@ -8,6 +8,6 @@ namespace Core.ServiceHelpers.PaymentService
 {
     public class RegisteredPaymentOrder
     {
-        public string OrderId { get; set; }
+        public long Id { get; set; }
     }
 }
