@@ -10,6 +10,9 @@ namespace Core.IServices
     {
         Task<string> GetPaymentToken();
         Task<string> CreateIFrameUrlForCardPayment();
+
+        Task<string> GetWalletPaymentToken();
+        Task<string> CreateWalletRedirectUrl();
         //string GenerateIFrameUrlForBankPayment();
     }
 }

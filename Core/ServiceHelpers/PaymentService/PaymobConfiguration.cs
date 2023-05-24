@@ -16,6 +16,7 @@ namespace Core.ServiceHelpers.PaymentService
         public string LockOrderWhenPaid { get; set; }
         public string IFrameUrl { get; set; }
         public string IFrameId { get; set; }
-        
+        public string MobileWalletUrl { get; set; }
+        public string MobileWalletIdntegrationId { get; set; }
     }
 }

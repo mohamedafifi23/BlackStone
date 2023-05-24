@@ -89,5 +89,19 @@ namespace API.Controllers
             return Ok(token);
         }
 
+        [HttpGet("GetIframeCardUrl")]
+        public async Task<IActionResult> GetPaymobToken2()
+        {
+            var token = await _paymentService.CreateIFrameUrlForCardPayment();
+            return Ok(token);
+        }
+
+        [HttpGet("GetWalletUrl")]
+        public async Task<IActionResult> GetWalletUrl()
+        {
+            var token = await _paymentService.CreateWalletRedirectUrl();
+            return Ok(token);
+        }
+
     }
 }
