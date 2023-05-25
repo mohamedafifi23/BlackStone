@@ -503,10 +503,12 @@ namespace API.Controllers
 
             await _tokenService.UpdateRefreshTokenAsync(validRefreshToken);
 
-            return Ok(new ApiSuccessResponse<UserDto>(200, "token refreshed successfully", new UserDto
-            {
-                Token= newAccessToken,
-            }));
+            //return Ok(new ApiSuccessResponse<UserDto>(200, "token refreshed successfully", new UserDto
+            //{
+            //    Token= newAccessToken,
+            //}));
+
+            return null;
         }
     }
 }
