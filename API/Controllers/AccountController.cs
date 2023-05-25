@@ -32,11 +32,12 @@ namespace API.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IStringLocalizer<SharedResource> _sharedResStrLocalizer;
         private readonly IOtpService _otpService;
+        private readonly IConfiguration _config;
 
         public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager
             , ITokenService tokenService, IMapper mapper, IEmailSenderService emailService
             , ILogger<AccountController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer
-            ,IOtpService otpService)
+            ,IOtpService otpService, IConfiguration config)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -46,6 +47,7 @@ namespace API.Controllers
             _logger = logger;
             _sharedResStrLocalizer = sharedResStrLocalizer;
             _otpService = otpService;
+            _config = config;
         }
 
         [Authorize]
@@ -59,7 +61,7 @@ namespace API.Controllers
                 Data = new UserDto
                 {
                     DisplayName = user.DisplayName,
-                    Token = await _tokenService.CreateToken(user),
+                    Token = await _tokenService.CreateTokenAsync(user),
                     Email = user.Email
                 }
             });
@@ -115,12 +117,19 @@ namespace API.Controllers
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
             if (!result.Succeeded) return Unauthorized(new ApiResponse(401));
 
+            await _tokenService.SaveRefreshTokenAsync(new RefreshToken
+            {
+                Email = user.Email,
+                Token = _tokenService.GenerateRefreshToken(),
+                ExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_config["Token:RefreshTokenExpirationDays"]))
+            });
+
             return Ok(new ApiSuccessResponse<UserDto>(200)
             {
                 Data = new UserDto
                 {
                     DisplayName = user.DisplayName,
-                    Token = await _tokenService.CreateToken(user),
+                    Token = await _tokenService.CreateTokenAsync(user),
                     Email = user.Email
                 }
             });
@@ -468,6 +477,36 @@ namespace API.Controllers
             {
                 Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users)
             });
+        }
+
+        [HttpPost("refreshtoken")]
+        public async Task<IActionResult> RefreshToken(RefreshTokenDto refreshTokenDto)
+        {
+            string accessToken = refreshTokenDto.AccessToken;
+            string refreshToken = refreshTokenDto.RefreshToken;
+
+            var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
+
+            var email = principal.FindFirstValue(ClaimTypes.Email);
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
+
+            var validRefreshToken = await _tokenService.CheckValidRefreshToken(email, refreshTokenDto.RefreshToken);
+            if ( validRefreshToken == null)
+                return BadRequest(new ApiResponse(400, "invalid refresh token"));
+
+            var newAccessToken = await _tokenService.CreateTokenAsync(user);
+            var newRefreshToken = _tokenService.GenerateRefreshToken();
+
+            validRefreshToken.Token = newRefreshToken;
+            validRefreshToken.ExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_config["Token:RefreshTokenExpirationDays"]));
+
+            await _tokenService.UpdateRefreshTokenAsync(validRefreshToken);
+
+            return Ok(new ApiSuccessResponse<UserDto>(200, "token refreshed successfully", new UserDto
+            {
+                Token= newAccessToken,
+            }));
         }
     }
 }

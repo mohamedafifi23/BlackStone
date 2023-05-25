@@ -15,6 +15,7 @@ namespace Infrastructure.Data.Identity
         public AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> options): base(options) { }
 
         public DbSet<MailOtp> MailOtps { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
