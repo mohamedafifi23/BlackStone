@@ -32,12 +32,11 @@ namespace API.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IStringLocalizer<SharedResource> _sharedResStrLocalizer;
         private readonly IOtpService _otpService;
-        private readonly IConfiguration _config;
 
         public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager
             , ITokenService tokenService, IMapper mapper, IEmailSenderService emailService
             , ILogger<AccountController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer
-            ,IOtpService otpService, IConfiguration config)
+            ,IOtpService otpService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -47,7 +46,6 @@ namespace API.Controllers
             _logger = logger;
             _sharedResStrLocalizer = sharedResStrLocalizer;
             _otpService = otpService;
-            _config = config;
         }
 
         [Authorize]
@@ -61,7 +59,6 @@ namespace API.Controllers
                 Data = new UserDto
                 {
                     DisplayName = user.DisplayName,
-                    Token = await _tokenService.CreateTokenAsync(user),
                     Email = user.Email
                 }
             });
@@ -117,31 +114,28 @@ namespace API.Controllers
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
             if (!result.Succeeded) return Unauthorized(new ApiResponse(401));
 
-            await _tokenService.SaveRefreshTokenAsync(new RefreshToken
+            var refreshToken = await _tokenService.GetRefreshTokenByEmailAsync(user.Email);
+            if(refreshToken == null)
             {
-                Email = user.Email,
-                Token = _tokenService.GenerateRefreshToken(),
-                ExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_config["Token:RefreshTokenExpirationDays"]))
-            });
+                await _tokenService.SaveRefreshTokenAsync(user.Email);
+                refreshToken = await _tokenService.GetRefreshTokenByEmailAsync(user.Email);
+            }
+            else
+            {
+                refreshToken =await _tokenService.UpdateRefreshTokenAsync(user.Email);
+            }
 
-            return Ok(new ApiSuccessResponse<UserDto>(200)
+            return Ok(new ApiSuccessResponse<AuthenticatedResponseDto>(200)
             {
-                Data = new UserDto
+                Data = new AuthenticatedResponseDto
                 {
                     DisplayName = user.DisplayName,
-                    Token = await _tokenService.CreateTokenAsync(user),
-                    Email = user.Email
+                    Email = user.Email,
+                    AccessToken = await _tokenService.CreateTokenAsync(user),
+                    RefreshToken=refreshToken.Token
                 }
             });
-        }
-
-        //[HttpGet("logout")]
-        //public async Task<IActionResult> Logout()
-        //{
-        //    Response.Headers.Remove("Authorization");
-            
-        //    return Ok("user signed out");
-        //}
+        }        
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto registerDto, [FromQuery] [Url] string clientURI)
@@ -194,7 +188,6 @@ namespace API.Controllers
                 Data = new UserDto
                 {
                     DisplayName = user.DisplayName,
-                    Token = null,
                     Email = user.Email
                 }
             });           
@@ -294,7 +287,6 @@ namespace API.Controllers
                 Data = new UserDto
                 {
                     DisplayName = user.DisplayName,
-                    Token = null,
                     Email = user.Email
                 }
             });
@@ -491,24 +483,43 @@ namespace API.Controllers
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
 
-            var validRefreshToken = await _tokenService.CheckValidRefreshToken(email, refreshTokenDto.RefreshToken);
+            var validRefreshToken = await _tokenService.CheckValidRefreshToken(email, refreshToken);
             if ( validRefreshToken == null)
                 return BadRequest(new ApiResponse(400, "invalid refresh token"));
 
             var newAccessToken = await _tokenService.CreateTokenAsync(user);
-            var newRefreshToken = _tokenService.GenerateRefreshToken();
+            var newRefreshToken = await _tokenService.GenerateRefreshToken();
 
             validRefreshToken.Token = newRefreshToken;
-            validRefreshToken.ExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_config["Token:RefreshTokenExpirationDays"]));
 
             await _tokenService.UpdateRefreshTokenAsync(validRefreshToken);
 
-            //return Ok(new ApiSuccessResponse<UserDto>(200, "token refreshed successfully", new UserDto
-            //{
-            //    Token= newAccessToken,
-            //}));
+            return Ok(new ApiSuccessResponse<AuthenticatedResponseDto>(200, "token refreshed successfully")
+            {
+                Data= new AuthenticatedResponseDto
+                {
+                    Email = user.Email,
+                    DisplayName = user.DisplayName,
+                    AccessToken = newAccessToken,
+                    RefreshToken = newRefreshToken
+                }
+            });
+        }
 
-            return null;
+        [Authorize, HttpPost("revoke")]
+        public async Task<IActionResult> Revoke()
+        {
+            string email = User.RetrieveEmailFromPrincipal();    
+            if(string.IsNullOrEmpty(email)) return BadRequest(new ApiResponse(400, "user not found"));
+
+            var refreshToken = await _tokenService.GetRefreshTokenByEmailAsync(email);
+            if (refreshToken == null) return BadRequest(new ApiResponse(400, "invalid refresh token"));
+
+            refreshToken.Token = null;
+
+            await _tokenService.UpdateRefreshTokenAsync(refreshToken);
+
+            return Ok(new ApiResponse(200, "token revoked successfully", success: true));
         }
     }
 }

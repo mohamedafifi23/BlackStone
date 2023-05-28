@@ -12,11 +12,13 @@ namespace Core.IServices
     public interface ITokenService
     {
         Task<string> CreateTokenAsync(AppUser user);
-        string GenerateRefreshToken();
+        Task<string> GenerateRefreshToken();
         ClaimsPrincipal GetPrincipalFromExpiredToken(string token);
         Task SaveRefreshTokenAsync(RefreshToken refreshToken);
+        Task SaveRefreshTokenAsync(string email);
         Task<RefreshToken?> CheckValidRefreshToken(string email, string refreshToken);
         Task<RefreshToken> UpdateRefreshTokenAsync(RefreshToken refreshTokenToUpdate);
-        void RemoveRefreshToken(RefreshToken refreshToken);
+        Task<RefreshToken> UpdateRefreshTokenAsync(string Email);
+        Task<RefreshToken> GetRefreshTokenByEmailAsync(string email);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using API.Helpers.CustomTokenProviders;
 using Core.Entities.Identity;
+using Core.ServiceHelpers.EmailSenderService;
 using Infrastructure.Data.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -34,18 +35,25 @@ namespace API.Extensions
             services.Configure<EmailConfirmationTokenProviderOptions>(options =>
                            options.TokenLifespan = TimeSpan.FromDays(1));
 
+            services.AddSingleton< EmailConfiguration>();
+
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Token:Key"])),
+                ValidateIssuer = true,
+                ValidIssuer = config["Token:Issuer"],
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                //otherwise it will add 5 mins to the expiration time. Token will be valid for extra 5 mins greater than it should be
+                ClockSkew = TimeSpan.FromSeconds(0)
+            };
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Token:Key"])),
-                        ValidateIssuer = true,
-                        ValidIssuer = config["Token:Issuer"],
-                        ValidateAudience = false
-                    };
+                    options.TokenValidationParameters = tokenValidationParameters;
                 });
+
             services.AddAuthorization();    
 
             return services;    
