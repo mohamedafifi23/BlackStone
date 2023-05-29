@@ -90,13 +90,14 @@ namespace Infrastructure.Services
 
                 if (mailOtp == null)
                 {
-                    await _appIdentityDbContext.MailOtps.AddAsync(new MailOtp
+                    mailOtp = new MailOtp
                     {
                         Email = email,
                         Otp = otp,
                         ExpireTime = expireTime,
                         Token = token
-                    });
+                    };
+                    await _appIdentityDbContext.MailOtps.AddAsync(mailOtp);
                 }
                 else
                 {

@@ -1,6 +1,5 @@
 ﻿using Core.Entities.Identity;
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -11,7 +10,6 @@ namespace Core.IServices
 {
     public interface ITokenService
     {
-        Task<string> CreateTokenAsync(AppUser user);
         Task<string> GenerateRefreshToken();
         ClaimsPrincipal GetPrincipalFromExpiredToken(string token);
         Task SaveRefreshTokenAsync(RefreshToken refreshToken);

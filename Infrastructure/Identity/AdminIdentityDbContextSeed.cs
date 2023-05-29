@@ -8,16 +8,17 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.Identity
 {
-    public static class AppIdentityDbContextSeed
+    public static class AdminIdentityDbContextSeed
     {
-        public static async Task SeedIdentityAsync(UserManager<AppUser> userManager, RoleManager<AppUserRole> roleManager)
+        public static async Task SeedIdentityAsync(UserManager<Admin> userManager, RoleManager<AdminRole> roleManager)
         {
             if (!roleManager.Roles.Any())
             {
-                var roles = new List<AppUserRole>()
+                var roles = new List<AdminRole>()
                 {
-                    new AppUserRole(){Name="Member"},
-                    new AppUserRole(){Name="Visitor"}
+                    new AdminRole(){Name="Visitor"},
+                    new AdminRole(){Name="Admin"},                    
+                    new AdminRole(){Name="SuperAdmin"}
                 };
 
                 foreach (var role in roles)
@@ -28,13 +29,13 @@ namespace Infrastructure.Identity
 
             if (!userManager.Users.Any())
             {
-                var appUser = new AppUser()
+                var admin = new Admin()
                 {
                     DisplayName = "mohamed afifi",
                     UserName= "mohammedafifi153@gmail.com",
                     Email = "mohammedafifi153@gmail.com",
                     PhoneNumber="+0101591099",
-                    Address = new Address()
+                    AdminAddress = new AdminAddress()
                     {
                         FirstName = "mohamed",
                         MiddleName = "ashraf",
@@ -45,13 +46,13 @@ namespace Infrastructure.Identity
                     }
                 };
 
-                await userManager.CreateAsync(appUser, "P@$$w0rd");
+                await userManager.CreateAsync(admin, "P@$$w0rd");
 
-                appUser.EmailConfirmed = true;
-                appUser.PhoneNumberConfirmed=true;
-                await userManager.UpdateAsync(appUser);
+                admin.EmailConfirmed = true;
+                admin.PhoneNumberConfirmed=true;
+                await userManager.UpdateAsync(admin);
 
-                await userManager.AddToRoleAsync(appUser, "Member");
+                await userManager.AddToRoleAsync(admin, "SuperAdmin");
             }   
         }
     }

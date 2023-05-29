@@ -10,6 +10,9 @@ namespace API.Helpers
         {
             CreateMap<Address, AddressDto>().ReverseMap();
             CreateMap<AppUser, UserWithAddressDto>().ReverseMap();
+
+            CreateMap<AdminAddress, AddressDto>().ReverseMap();
+            CreateMap<Admin, UserWithAddressDto>().ReverseMap();
         }
     }
 }

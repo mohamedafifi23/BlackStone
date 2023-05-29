@@ -1,7 +1,11 @@
 ﻿using Core.IServices;
 using Core.ServiceHelpers.EmailSenderService;
+using Infrastructure.Data.Identity;
 using MailKit.Net.Smtp;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MimeKit;
 using System;
 using System.Collections.Generic;
@@ -16,10 +20,10 @@ namespace Infrastructure.Services
         private readonly EmailConfiguration _emailConfig;
         private readonly ILogger<EmailSenderService> _logger;
 
-        public EmailSenderService(EmailConfiguration emailConfig, ILogger<EmailSenderService> logger)
+        public EmailSenderService(IOptions<EmailConfiguration> emailConfig, ILogger<EmailSenderService> logger)
         {
-            _emailConfig = emailConfig;
-            _logger = logger;
+            _emailConfig = emailConfig.Value;
+            _logger = logger;           
         }
 
         public void SendEmail(Message message)

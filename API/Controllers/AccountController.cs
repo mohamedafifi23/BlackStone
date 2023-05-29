@@ -26,7 +26,7 @@ namespace API.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
-        private readonly ITokenService _tokenService;
+        private readonly IAppUserTokenService _tokenService;
         private readonly IMapper _mapper;
         private readonly IEmailSenderService _emailService;
         private readonly ILogger<AccountController> _logger;
@@ -34,7 +34,7 @@ namespace API.Controllers
         private readonly IOtpService _otpService;
 
         public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager
-            , ITokenService tokenService, IMapper mapper, IEmailSenderService emailService
+            , IAppUserTokenService tokenService, IMapper mapper, IEmailSenderService emailService
             , ILogger<AccountController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer
             ,IOtpService otpService)
         {
@@ -137,121 +137,6 @@ namespace API.Controllers
             });
         }        
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterDto registerDto, [FromQuery] [Url] string clientURI)
-        {
-            if (clientURI == null) return BadRequest(new ApiValidationErrorResponse()
-            {
-                Errors = new List<string> { "you must enter client Url" }
-            });
-
-            if (CheckEmailExistsAsync(registerDto.Email).Result.Value)
-            {
-                return new BadRequestObjectResult(new ApiValidationErrorResponse()
-                {
-                    Errors = new[] { "email address is used before" }
-                });
-            }
-
-            var user = new AppUser()
-            {
-                Email = registerDto.Email,
-                DisplayName = registerDto.DisplayName,
-                UserName = registerDto.Email,
-                PhoneNumber = registerDto.Phone
-            };
-
-            var result = await _userManager.CreateAsync(user, registerDto.Password);
-
-            if (!result.Succeeded) return BadRequest(new ApiResponse(400));
-
-
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-            Dictionary<string, string> queryParams = new Dictionary<string, string>
-            {
-                {"email", user.Email},
-                {"token", token }
-            };
-
-            var confirmationLink = QueryHelpers.AddQueryString(clientURI, queryParams);
-            
-            _logger.LogInformation(confirmationLink);
-
-            var message = new Message(new List<string> { user.Email}, "BlackStone confirmation email link", confirmationLink);
-            await _emailService.SendEmailAsync(message);
-
-            await _userManager.AddToRoleAsync(user, "Visitor");
-           
-            return CreatedAtAction("register", "account", new ApiSuccessResponse<UserDto>(201, "Please check your email for the verification action.")
-            {
-                Data = new UserDto
-                {
-                    DisplayName = user.DisplayName,
-                    Email = user.Email
-                }
-            });           
-        }
-
-        [HttpGet("confirmemail")]
-        public async Task<IActionResult> ConfirmEmail([FromQuery][EmailAddress] string email, [FromQuery] string token)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
-
-            if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
-
-            var identityResult = await _userManager.ConfirmEmailAsync(user, token);
-
-            if (!identityResult.Succeeded) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
-
-            if (await _userManager.IsInRoleAsync(user, "Visitor"))
-            {
-                var removeRoleResult = await _userManager.RemoveFromRoleAsync(user, "Visitor");
-
-                if (!removeRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
-                    new ApiResponse(StatusCodes.Status500InternalServerError));
-            }
-
-            if (!await _userManager.IsInRoleAsync(user, "Member"))
-            {
-                var memberRoleResult = await _userManager.AddToRoleAsync(user, "Member");
-                if (!memberRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
-                    new ApiResponse(StatusCodes.Status500InternalServerError));
-            }
-
-            return NoContent();
-        }
-
-        [HttpGet("resendconfirmemailtoken")]
-        public async Task<IActionResult> ResendTokenToVerifyEmail(ForgetPasswordDto forgetPasswordDto)
-        {
-            var user = await _userManager.FindByEmailAsync(forgetPasswordDto.Email);
-
-            if (user == null) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
-
-            if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
-
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-            Dictionary<string, string> queryParams = new Dictionary<string, string>
-            {
-                {"email", user.Email},
-                {"token", token }
-            };
-
-            var confirmationLink = QueryHelpers.AddQueryString(forgetPasswordDto.ClientURI, queryParams);
-
-            _logger.LogInformation(confirmationLink);
-
-            var message = new Message(new List<string> { user.Email }, "BlackStone confirmation email link", confirmationLink);
-            await _emailService.SendEmailAsync(message);
-
-            return Ok(new ApiResponse(200, success: true));
-        }
-
-
         [HttpPost("registerotp")]
         public async Task<IActionResult> RegisterOtp(RegisterDto registerDto)
         {
@@ -282,7 +167,7 @@ namespace API.Controllers
                         
             await _userManager.AddToRoleAsync(user, "Visitor");
 
-            return CreatedAtAction("register", "account", new ApiSuccessResponse<UserDto>(201, "Please check your email for the verification action.")
+            return CreatedAtAction("registerotp", "account", new ApiSuccessResponse<UserDto>(201, "Please check your email for the verification action.")
             {
                 Data = new UserDto
                 {
@@ -343,24 +228,6 @@ namespace API.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "SuperAdmin,Admin")]
-        [HttpDelete("deleteuser")]
-        public async Task<IActionResult> DeleteMember(string email)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
-
-            var result = await _userManager.DeleteAsync(user);
-
-            if (!result.Succeeded) return BadRequest(new ApiResponse(400));
-
-            return Ok(new ApiSuccessResponse<Dictionary<string, string>>(200, "user deleted successfully")
-            {
-                Data=new Dictionary<string, string> { {"email",  email} }
-            });
-        }
-
         [Authorize]
         [HttpPost("changepassword")]
         public async Task<IActionResult> ChangePassword(ChangePasswordDto changePasswordDto)
@@ -376,49 +243,6 @@ namespace API.Controllers
                     { Errors = result.Errors.Select(e => e.Description) });
 
             return Ok(new ApiResponse(200, "Password changed successfully", true));
-        }
-
-        [HttpPost("forgetpassword")]
-        public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordDto forgetPasswordDto)
-        {
-            var user = await _userManager.FindByEmailAsync(forgetPasswordDto.Email);
-
-            if (user is null) return BadRequest(new ApiResponse(400, "user not found."));
-
-            if (!user.EmailConfirmed) return BadRequest(new ApiResponse(400, "confirm your email to reset password"));
-
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);          
-            _logger.LogInformation(token);
-
-            Dictionary<string, string> param = new Dictionary<string, string>
-            {
-                ["email"] = forgetPasswordDto.Email,
-                ["token"] = token
-            };
-            var resetpasswordLink = QueryHelpers.AddQueryString(forgetPasswordDto.ClientURI, param);
-
-            _logger.LogInformation(resetpasswordLink);
-
-            var message = new Message(new List<string> { user.Email }, "BlackStone reset password link", resetpasswordLink);
-            await _emailService.SendEmailAsync(message);
-
-            return Ok(new ApiResponse(200, "Please check your email for the verification action.", true));
-        }
-
-        [HttpPost("resetpassword")]
-        public async Task<IActionResult> ResetPassword(ResetPasswordDto resetPasswordDto)
-        {
-            var user = await _userManager.FindByEmailAsync(resetPasswordDto.Email);
-            if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
-            
-            resetPasswordDto.Token = HttpUtility.UrlDecode(resetPasswordDto.Token);
-            _logger.LogInformation(resetPasswordDto.Token);
-
-            var resetPassResult = await _userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
-            if (!resetPassResult.Succeeded) return BadRequest(new ApiValidationErrorResponse()
-            { Errors = resetPassResult.Errors.Select(e => e.Description) });
-
-            return Ok(new ApiResponse(200, "password reset successfully", true));
         }
 
         [HttpPost("forgetpasswordotp")]
@@ -457,18 +281,6 @@ namespace API.Controllers
             await _otpService.DeleteUserVerifiedOtpAsync(validMailOtp.Email, validMailOtp.Otp);
 
             return Ok(new ApiResponse(200, "password reset successfully", true));
-        }
-
-        [Authorize(Roles = "SuperAdmin,Admin")]
-        [HttpGet("getusers")]
-        public async Task<IActionResult> GetUsers()
-        {
-            var users = await _userManager.Users.Include(u => u.Address).ToListAsync();
-
-            return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>
-            {
-                Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users)
-            });
         }
 
         [HttpPost("refreshtoken")]

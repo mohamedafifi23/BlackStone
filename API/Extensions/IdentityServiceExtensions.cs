@@ -18,24 +18,36 @@ namespace API.Extensions
             {
                 options.UseSqlServer(config.GetConnectionString("IdentityConnection"));
             });
+            services.AddDbContext<AdminIdentityDbContext>(options =>
+            {
+                options.UseSqlServer(config.GetConnectionString("AdminIdentityConnection"));
+            });
+
+            services.AddIdentityCore<Admin>(options =>
+            {
+                options.SignIn.RequireConfirmedEmail = true;
+                //options.Tokens.EmailConfirmationTokenProvider = "emailconfirmation";
+            })
+                .AddRoles<AdminRole>()
+                .AddEntityFrameworkStores<AdminIdentityDbContext>()
+                .AddDefaultTokenProviders()
+                //.AddTokenProvider<EmailConfirmationTokenProvider<Admin>>("emailconfirmation")
+                .AddSignInManager<SignInManager<Admin>>();
+            //services.Configure<DataProtectionTokenProviderOptions>(options =>
+            //               options.TokenLifespan = TimeSpan.FromHours(2));
+            //services.Configure<EmailConfirmationTokenProviderOptions>(options =>
+            //               options.TokenLifespan = TimeSpan.FromDays(1));
 
             services.AddIdentityCore<AppUser>(options =>
             {
-                options.SignIn.RequireConfirmedEmail = true;
-                options.Tokens.EmailConfirmationTokenProvider = "emailconfirmation";
+                options.SignIn.RequireConfirmedEmail = true;               
             })
-                .AddRoles<AppUserRole>()
-                .AddEntityFrameworkStores<AppIdentityDbContext>()
-                .AddDefaultTokenProviders()
-                .AddTokenProvider<EmailConfirmationTokenProvider<AppUser>>("emailconfirmation")
-                .AddSignInManager<SignInManager<AppUser>>();
+               .AddRoles<AppUserRole>()
+               .AddEntityFrameworkStores<AppIdentityDbContext>()
+               .AddDefaultTokenProviders()
+               .AddSignInManager<SignInManager<AppUser>>();                      
 
-            services.Configure<DataProtectionTokenProviderOptions>(options =>
-                           options.TokenLifespan = TimeSpan.FromHours(2));
-            services.Configure<EmailConfirmationTokenProviderOptions>(options =>
-                           options.TokenLifespan = TimeSpan.FromDays(1));
-
-            services.AddSingleton< EmailConfiguration>();
+            services.AddSingleton<EmailConfiguration>();
 
             var tokenValidationParameters = new TokenValidationParameters
             {

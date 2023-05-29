@@ -17,16 +17,16 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.Services
 {
-    public class TokenService : ITokenService
+    public class AppUserTokenService : IAppUserTokenService
     {
         private readonly IConfiguration _config;
         private readonly UserManager<AppUser> _userManager;
-        private readonly ILogger<TokenService> _logger;
+        private readonly ILogger<AppUserTokenService> _logger;
         private readonly AppIdentityDbContext _appIdentityDbContext;
         private readonly SymmetricSecurityKey _key;
 
-        public TokenService(IConfiguration config, UserManager<AppUser> userManager
-            ,ILogger<TokenService> logger, AppIdentityDbContext appIdentityDbContext)
+        public AppUserTokenService(IConfiguration config, UserManager<AppUser> userManager
+            ,ILogger<AppUserTokenService> logger, AppIdentityDbContext appIdentityDbContext)
         {
             _config = config;
             _userManager = userManager;

@@ -22,7 +22,8 @@ namespace API.Extensions
                 });
             });
 
-            services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IAppUserTokenService, AppUserTokenService>();
+            services.AddScoped<IAdminTokenService, AdminTokenService>();
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
@@ -41,9 +42,7 @@ namespace API.Extensions
                 };
             });
 
-            var emailConfig = configuration.GetSection("EmailConfiguration")
-                .Get<EmailConfiguration>();
-            services.AddSingleton(emailConfig);
+            services.Configure<EmailConfiguration>(configuration.GetSection("EmailConfiguration"));
             services.AddScoped<IEmailSenderService, EmailSenderService>();
 
             var paymobConfig = configuration.GetSection("PaymobConfiguration")

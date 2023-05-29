@@ -4,12 +4,14 @@ using API.Extensions;
 using API.Helpers;
 using API.Middlewares;
 using Core.Entities.Identity;
+using Core.ServiceHelpers.EmailSenderService;
 using Infrastructure.Data.Identity;
 using Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
@@ -35,15 +37,15 @@ internal class Program
             builder.Host.ConfigureSeriLog();
 
             // Add services to the container.
+            builder.Services.AddApplicationServices(builder.Configuration);
+            builder.Services.AddIdentityServices(builder.Configuration);
             builder.Services.AddLocalizationServices(builder.Configuration);
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
                 });
-            builder.Services.AddApplicationServices(builder.Configuration);
-            builder.Services.AddIdentityServices(builder.Configuration);
-
+        
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddSwaggerDocumentation();
 
@@ -88,10 +90,13 @@ internal class Program
             var identityContext = services.GetRequiredService<AppIdentityDbContext>();
             var userManager = services.GetRequiredService<UserManager<AppUser>>();
             var roleManager = services.GetRequiredService<RoleManager<AppUserRole>>();
+            var adminUserManager = services.GetRequiredService<UserManager<Admin>>();
+            var adminRoleManager = services.GetRequiredService<RoleManager<AdminRole>>();
             var sharedLocalizer = services.GetRequiredService<IStringLocalizer<SharedResource>>();
 
             await identityContext.Database.MigrateAsync();
             await AppIdentityDbContextSeed.SeedIdentityAsync(userManager, roleManager);
+            await AdminIdentityDbContextSeed.SeedIdentityAsync(adminUserManager, adminRoleManager);
             ApiResponse.SetLocalizer(sharedLocalizer);
             LocalizerManager.SetLocalizer(sharedLocalizer);
 
