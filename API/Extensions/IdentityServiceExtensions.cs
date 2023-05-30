@@ -47,6 +47,7 @@ namespace API.Extensions
             })
                .AddRoles<AppUserRole>()
                .AddEntityFrameworkStores<AppIdentityDbContext>()
+               //uncomment if 2 seperated solutions
                //.AddDefaultTokenProviders() //resolved reset password token issue at least
                //.AddEmailConfirmationTotpTokenProvider()
                //.AddTokenProvider<DataProtectorTokenProvider<AppUser>>(TokenOptions.DefaultAuthenticatorProvider)
