@@ -4,6 +4,7 @@ using Core.ServiceHelpers.EmailSenderService;
 using Infrastructure.Data.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -41,11 +42,12 @@ namespace API.Extensions
             services.AddIdentityCore<AppUser>(options =>
             {
                 options.SignIn.RequireConfirmedEmail = true;
-                //options.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultAuthenticatorProvider;
+                //options.Tokens.ProviderMap.Add("EmailConfirmation",
+                                       //new TokenProviderDescriptor(typeof(EmailConfirmationTokenProvider<AppUser>)));
             })
                .AddRoles<AppUserRole>()
                .AddEntityFrameworkStores<AppIdentityDbContext>()
-               //.AddDefaultTokenProviders()
+               //.AddDefaultTokenProviders() //resolved reset password token issue at least
                //.AddEmailConfirmationTotpTokenProvider()
                //.AddTokenProvider<DataProtectorTokenProvider<AppUser>>(TokenOptions.DefaultAuthenticatorProvider)
                //.AddTokenProvider<EmailConfirmationTokenProvider<AppUser>>("EmailConfirmation")

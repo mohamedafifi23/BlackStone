@@ -29,11 +29,12 @@ namespace API.Controllers
         private readonly ILogger<AdminController> _logger;
         private readonly IStringLocalizer<SharedResource> _sharedResStrLocalizer;
         private readonly UserManager<AppUser> _userManager;
+        private readonly IEmailSenderService _emailSenderService;
 
         public AdminController(UserManager<Admin> adminUserManager, SignInManager<Admin> signInManager
             , IAdminTokenService tokenService, IMapper mapper, IEmailSenderService emailService
             , ILogger<AdminController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer
-            , UserManager<AppUser> userManager)
+            , UserManager<AppUser> userManager, IEmailSenderService emailSenderService)
         {
             _adminUserManager = adminUserManager;
             _signInManager = signInManager;
@@ -43,6 +44,7 @@ namespace API.Controllers
             _logger = logger;
             _sharedResStrLocalizer = sharedResStrLocalizer;
             _userManager = userManager;
+            _emailSenderService = emailSenderService;
         }
 
         [Authorize]
@@ -301,7 +303,7 @@ namespace API.Controllers
             return Ok(new ApiResponse(200, "Password changed successfully", true));
         }
 
-        [Authorize("SuperAdmin")]
+        [Authorize(Roles = "SuperAdmin")]
         [HttpPost("forgetpassword")]
         public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordDto forgetPasswordDto)
         {
@@ -329,7 +331,7 @@ namespace API.Controllers
             return Ok(new ApiResponse(200, "Please check your email for the verification action.", true));
         }
 
-        [Authorize("SuperAdmin")]
+        [Authorize(Roles ="SuperAdmin")]
         [HttpPost("resetpassword")]
         public async Task<IActionResult> ResetPassword(ResetPasswordDto resetPasswordDto)
         {
@@ -358,6 +360,7 @@ namespace API.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpPost("refreshtoken")]
         public async Task<IActionResult> RefreshToken(RefreshTokenDto refreshTokenDto)
         {
@@ -408,5 +411,84 @@ namespace API.Controllers
 
             return Ok(new ApiResponse(200, "token revoked successfully", success: true));
         }
+
+        #region Users Activation
+        [Authorize(Roles ="Admin,SuperAdmin")]
+        [HttpPost("activateusers")]
+        public async Task<IActionResult> ActivateUsers([FromBody] List<string> emailsToActivate)
+        {
+            var users = await _userManager.Users.Where(u => emailsToActivate.Contains(u.Email)).ToListAsync();
+            
+            foreach (var user in users)
+            {
+                if(await _userManager.IsInRoleAsync(user, "Visitor"))
+                {
+                    await _userManager.RemoveFromRoleAsync(user, "Visitor");
+                    await _userManager.AddToRoleAsync(user, "Member");
+                }                
+            }
+
+            var Message = new Message(users.Select(u => u.Email).ToList(), "BalckStone Account Activation", "your account is activated.");
+            await _emailService.SendEmailAsync(Message);
+           
+            return Ok(new ApiSuccessResponse<List<string>>(200, "users activated successfully")
+            {
+                Data = emailsToActivate
+            });
+        }
+
+        [Authorize(Roles = "SuperAdmin,Admin")]
+        [HttpPost("deactivateusers")]
+        public async Task<IActionResult> DeactivateUsers([FromBody] List<string> emailsToDeactivate)
+        {
+            var users = await _userManager.Users.Where(u => emailsToDeactivate.Contains(u.Email)).ToListAsync();
+            
+            foreach (var user in users)
+            {
+                if (await _userManager.IsInRoleAsync(user, "Member"))
+                {
+                    await _userManager.RemoveFromRoleAsync(user, "Member");
+                    await _userManager.AddToRoleAsync(user, "Visitor");
+                }
+            }
+
+            var Message = new Message(users.Select(u=>u.Email).ToList(), "BalckStone Account Deactivation", "your account is deactivated.");
+            await _emailService.SendEmailAsync(Message);
+
+            return Ok(new ApiSuccessResponse<List<string>>(200, "users deactivated successfully")
+            {
+                Data = emailsToDeactivate
+            });
+        }
+
+        [Authorize(Roles = "SuperAdmin,Admin")]
+        [HttpGet("activeusers")]
+        public async Task<IActionResult> GetActiveUsers()
+        {
+            var users = await _userManager.GetUsersInRoleAsync("Member");
+          
+            return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>(200)
+            {
+                Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users.ToList())
+            });
+        }
+
+        [Authorize(Roles = "Admin,SuperAdmin")]
+        [HttpGet("nonactiveusers")]
+        [HttpGet("newusers")]
+        public async Task<IActionResult> GetNonActiveUsers()
+        {
+            var users = await _userManager.GetUsersInRoleAsync("Visitor");
+            
+            return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>(200)
+            {
+                Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users.ToList())
+            });
+        }
+        #endregion
+
+        #region User Groups
+         
+        #endregion
     }
 }

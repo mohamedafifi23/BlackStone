@@ -48,7 +48,7 @@ namespace API.Controllers
             _otpService = otpService;
         }
 
-        [Authorize]
+        [Authorize(Roles = "Member")]
         [HttpGet("getcurrentuser")]
         public async Task<IActionResult> GetCurrentUser()
         {
@@ -70,7 +70,7 @@ namespace API.Controllers
             return await _userManager.FindByEmailAsync(email) != null;
         }
 
-        [Authorize]
+        [Authorize(Roles = "Member")]
         [HttpGet("address")]
         public async Task<IActionResult> GetUserAddress()
         {
@@ -82,7 +82,7 @@ namespace API.Controllers
             });
         }
 
-        [Authorize]
+        [Authorize(Roles = "Member")]
         [HttpPut("address")]
         public async Task<IActionResult> UpdateUserAddress(AddressDto address)
         {
@@ -153,7 +153,7 @@ namespace API.Controllers
                 Email = registerDto.Email,
                 DisplayName = registerDto.DisplayName,
                 UserName = registerDto.Email,
-                PhoneNumber = registerDto.Phone
+                PhoneNumber = registerDto.Phone,
             };
 
             var result = await _userManager.CreateAsync(user, registerDto.Password);
@@ -233,7 +233,7 @@ namespace API.Controllers
             return NoContent();
         }
 
-        [Authorize]
+        [Authorize(Roles = "Member")]
         [HttpPost("changepassword")]
         public async Task<IActionResult> ChangePassword(ChangePasswordDto changePasswordDto)
         {
@@ -259,7 +259,8 @@ namespace API.Controllers
 
             if (!await _userManager.IsEmailConfirmedAsync(user)) return BadRequest(new ApiResponse(400, "confirm your email to reset password"));
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            //var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var token = Convert.ToBase64String(await _userManager.CreateSecurityTokenAsync(user));
             var otp = _otpService.GenerateRandomNumericOTP();
             MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
 
@@ -323,7 +324,7 @@ namespace API.Controllers
             });
         }
 
-        [Authorize, HttpPost("revoke")]
+        [Authorize(Roles = "Member"), HttpPost("revoke")]
         public async Task<IActionResult> Revoke()
         {
             string email = User.RetrieveEmailFromPrincipal();    

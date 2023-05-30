@@ -16,8 +16,8 @@ namespace Infrastructure.Identity
             {
                 var roles = new List<AppUserRole>()
                 {
-                    new AppUserRole(){Name="Member"},
-                    new AppUserRole(){Name="Visitor"}
+                    new AppUserRole(){Name="Visitor"},
+                    new AppUserRole(){Name="Member"}
                 };
 
                 foreach (var role in roles)

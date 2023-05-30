@@ -69,8 +69,7 @@ namespace Infrastructure.Services
             using (var rng = RandomNumberGenerator.Create())
             {
                 rng.GetBytes(randomNumber);
-                _logger.LogInformation(string.Join(' ', randomNumber));
-                _logger.LogInformation(string.Join(' ', Convert.ToBase64String(randomNumber)));
+                _logger.LogInformation(string.Join(' ', "refreshToken: "+Convert.ToBase64String(randomNumber)));
                 return Convert.ToBase64String(randomNumber);
             }
         }

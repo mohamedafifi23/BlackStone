@@ -62,7 +62,7 @@ namespace Infrastructure.Identity.Migrations
                     b.HasIndex("AppUserId")
                         .IsUnique();
 
-                    b.ToTable("Address");
+                    b.ToTable("Address", (string)null);
                 });
 
             modelBuilder.Entity("Core.Entities.Identity.AppUser", b =>
@@ -179,7 +179,7 @@ namespace Infrastructure.Identity.Migrations
 
                     b.HasKey("Email");
 
-                    b.ToTable("MailOtps");
+                    b.ToTable("MailOtps", (string)null);
                 });
 
             modelBuilder.Entity("Core.Entities.Identity.RefreshToken", b =>
@@ -202,7 +202,7 @@ namespace Infrastructure.Identity.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
