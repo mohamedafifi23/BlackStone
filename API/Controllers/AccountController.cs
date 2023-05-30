@@ -161,7 +161,9 @@ namespace API.Controllers
             if (!result.Succeeded) return BadRequest(new ApiResponse(400));
 
             var otp = _otpService.GenerateRandomNumericOTP();
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            //var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var token = await _userManager.GenerateUserTokenAsync(user, "EmailTokenProvider", "EmailConfirmation");
+            //var token = Convert.ToBase64String(await _userManager.CreateSecurityTokenAsync(user));
             MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
             await _otpService.SendMailOtpAsync(user.Email, "BlackStone confirmation email link", mailOtp.Otp);
                         
@@ -187,6 +189,7 @@ namespace API.Controllers
             if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
 
             var otp = _otpService.GenerateRandomNumericOTP();
+            //var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
             await _otpService.SendMailOtpAsync(user.Email, "BlackStone confirmation email link", mailOtp.Otp);

@@ -26,25 +26,27 @@ namespace API.Extensions
             services.AddIdentityCore<Admin>(options =>
             {
                 options.SignIn.RequireConfirmedEmail = true;
-                //options.Tokens.EmailConfirmationTokenProvider = "emailconfirmation";
+                options.Tokens.EmailConfirmationTokenProvider = "emailconfirmation";
             })
                 .AddRoles<AdminRole>()
                 .AddEntityFrameworkStores<AdminIdentityDbContext>()
                 .AddDefaultTokenProviders()
-                //.AddTokenProvider<EmailConfirmationTokenProvider<Admin>>("emailconfirmation")
+                .AddTokenProvider<EmailConfirmationTokenProvider<Admin>>("emailconfirmation")
                 .AddSignInManager<SignInManager<Admin>>();
-            //services.Configure<DataProtectionTokenProviderOptions>(options =>
-            //               options.TokenLifespan = TimeSpan.FromHours(2));
-            //services.Configure<EmailConfirmationTokenProviderOptions>(options =>
-            //               options.TokenLifespan = TimeSpan.FromDays(1));
+            services.Configure<DataProtectionTokenProviderOptions>(options =>
+                           options.TokenLifespan = TimeSpan.FromHours(2));
+            services.Configure<EmailConfirmationTokenProviderOptions>(options =>
+                           options.TokenLifespan = TimeSpan.FromDays(1));
 
             services.AddIdentityCore<AppUser>(options =>
             {
-                options.SignIn.RequireConfirmedEmail = true;               
+                options.SignIn.RequireConfirmedEmail = true;
+                //options.Tokens.EmailConfirmationTokenProvider = "EmailConfirmation";
             })
                .AddRoles<AppUserRole>()
                .AddEntityFrameworkStores<AppIdentityDbContext>()
-               .AddDefaultTokenProviders()
+               //.AddDefaultTokenProviders()
+               //.AddTokenProvider<EmailConfirmationTokenProvider<AppUser>>("EmailConfirmation")
                .AddSignInManager<SignInManager<AppUser>>();                      
 
             services.AddSingleton<EmailConfiguration>();
