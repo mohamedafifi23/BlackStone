@@ -41,11 +41,13 @@ namespace API.Extensions
             services.AddIdentityCore<AppUser>(options =>
             {
                 options.SignIn.RequireConfirmedEmail = true;
-                //options.Tokens.EmailConfirmationTokenProvider = "EmailConfirmation";
+                //options.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultAuthenticatorProvider;
             })
                .AddRoles<AppUserRole>()
                .AddEntityFrameworkStores<AppIdentityDbContext>()
                //.AddDefaultTokenProviders()
+               //.AddEmailConfirmationTotpTokenProvider()
+               //.AddTokenProvider<DataProtectorTokenProvider<AppUser>>(TokenOptions.DefaultAuthenticatorProvider)
                //.AddTokenProvider<EmailConfirmationTokenProvider<AppUser>>("EmailConfirmation")
                .AddSignInManager<SignInManager<AppUser>>();                      
 

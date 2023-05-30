@@ -28,10 +28,12 @@ namespace API.Controllers
         private readonly IEmailSenderService _emailService;
         private readonly ILogger<AdminController> _logger;
         private readonly IStringLocalizer<SharedResource> _sharedResStrLocalizer;
+        private readonly UserManager<AppUser> _userManager;
 
         public AdminController(UserManager<Admin> adminUserManager, SignInManager<Admin> signInManager
             , IAdminTokenService tokenService, IMapper mapper, IEmailSenderService emailService
-            , ILogger<AdminController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer)
+            , ILogger<AdminController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer
+            , UserManager<AppUser> userManager)
         {
             _adminUserManager = adminUserManager;
             _signInManager = signInManager;
@@ -40,6 +42,7 @@ namespace API.Controllers
             _emailService = emailService;
             _logger = logger;
             _sharedResStrLocalizer = sharedResStrLocalizer;
+            _userManager = userManager;
         }
 
         [Authorize]
@@ -248,6 +251,24 @@ namespace API.Controllers
         [Authorize(Roles = "SuperAdmin,Admin")]
         [HttpDelete("deleteuser")]
         public async Task<IActionResult> DeleteMember(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
+
+            var result = await _userManager.DeleteAsync(user);
+
+            if (!result.Succeeded) return BadRequest(new ApiResponse(400));
+
+            return Ok(new ApiSuccessResponse<Dictionary<string, string>>(200, "user deleted successfully")
+            {
+                Data = new Dictionary<string, string> { { "email", email } }
+            });
+        }
+
+        [Authorize(Roles = "SuperAdmin")]
+        [HttpDelete("deleteadmin")]
+        public async Task<IActionResult> DeleteAdmin(string email)
         {
             var user = await _adminUserManager.FindByEmailAsync(email);
 

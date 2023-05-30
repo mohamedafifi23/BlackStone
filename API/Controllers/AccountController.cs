@@ -162,8 +162,8 @@ namespace API.Controllers
 
             var otp = _otpService.GenerateRandomNumericOTP();
             //var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var token = await _userManager.GenerateUserTokenAsync(user, "EmailTokenProvider", "EmailConfirmation");
-            //var token = Convert.ToBase64String(await _userManager.CreateSecurityTokenAsync(user));
+            //var token = await _userManager.GenerateUserTokenAsync(user, "EmailConfirmationTotpTokenProvider", "EmailConfirmationOtp");
+            var token = Convert.ToBase64String(await _userManager.CreateSecurityTokenAsync(user));
             MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
             await _otpService.SendMailOtpAsync(user.Email, "BlackStone confirmation email link", mailOtp.Otp);
                         
@@ -190,7 +190,7 @@ namespace API.Controllers
 
             var otp = _otpService.GenerateRandomNumericOTP();
             //var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var token = Convert.ToBase64String(await _userManager.CreateSecurityTokenAsync(user));
             MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
             await _otpService.SendMailOtpAsync(user.Email, "BlackStone confirmation email link", mailOtp.Otp);
 
@@ -209,7 +209,9 @@ namespace API.Controllers
             MailOtp valifMailOtp = await _otpService.VerifyUserMailOtpAsync(confirmEmailOtpDto.Email, confirmEmailOtpDto.Otp);
             if (string.IsNullOrEmpty(valifMailOtp.Token)) return BadRequest(new ApiResponse(400, "your email is not verified. check correctness of entered otp or it will be expired."));
 
-            var identityResult = await _userManager.ConfirmEmailAsync(user, valifMailOtp.Token);
+            //var identityResult = await _userManager.ConfirmEmailAsync(user, valifMailOtp.Token);
+            user.EmailConfirmed = true;
+            var identityResult = await _userManager.UpdateAsync(user);
             if (!identityResult.Succeeded) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
 
             if (await _userManager.IsInRoleAsync(user, "Visitor"))

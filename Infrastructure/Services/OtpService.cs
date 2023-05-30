@@ -32,7 +32,7 @@ namespace Infrastructure.Services
             _emailService = emailService;
             _userManager = userManager;
             _appIdentityDbContext = appIdentityDbContext;
-        }        
+        }
 
         public string GenerateRandomNumericOTP()
         {
@@ -83,7 +83,7 @@ namespace Infrastructure.Services
         public async Task<MailOtp> SaveUserMailOtpAsync(string email, string otp, string token)
         {
             var mailOtp = await _appIdentityDbContext.MailOtps.FirstOrDefaultAsync(o => o.Email == email);
-            
+
             try
             {
                 DateTime expireTime = DateTime.UtcNow.AddMinutes(int.Parse(_config["Otp:ExpireTime"]));
@@ -98,6 +98,7 @@ namespace Infrastructure.Services
                         Token = token
                     };
                     await _appIdentityDbContext.MailOtps.AddAsync(mailOtp);
+                    await _appIdentityDbContext.SaveChangesAsync();
                 }
                 else
                 {
@@ -106,10 +107,10 @@ namespace Infrastructure.Services
                     mailOtp.Token = token;
 
                     _appIdentityDbContext.MailOtps.Update(mailOtp);
+                    await _appIdentityDbContext.SaveChangesAsync();
                 }
 
                 _appIdentityDbContext.Attach(mailOtp);
-                _appIdentityDbContext.SaveChanges();
             }
             catch (Exception ex)
             {
