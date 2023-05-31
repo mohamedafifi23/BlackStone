@@ -19,11 +19,11 @@ using System.Web;
 
 namespace API.Controllers
 {
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public class AdminController : BaseApiController
     {
-        private readonly UserManager<Admin> _adminUserManager;
-        private readonly SignInManager<Admin> _signInManager;
-        private readonly IAdminTokenService _tokenService;
+        private readonly SignInManager<AppUser> _signInManager;
+        private readonly IAppUserTokenService _tokenService;
         private readonly IMapper _mapper;
         private readonly IEmailSenderService _emailService;
         private readonly ILogger<AdminController> _logger;
@@ -31,12 +31,11 @@ namespace API.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly IEmailSenderService _emailSenderService;
 
-        public AdminController(UserManager<Admin> adminUserManager, SignInManager<Admin> signInManager
-            , IAdminTokenService tokenService, IMapper mapper, IEmailSenderService emailService
+        public AdminController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager
+            , IAppUserTokenService tokenService, IMapper mapper, IEmailSenderService emailService
             , ILogger<AdminController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer
-            , UserManager<AppUser> userManager, IEmailSenderService emailSenderService)
+            , IEmailSenderService emailSenderService)
         {
-            _adminUserManager = adminUserManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
             _mapper = mapper;
@@ -48,10 +47,10 @@ namespace API.Controllers
         }
 
         [Authorize]
-        [HttpGet("getcurrentuser")]
-        public async Task<IActionResult> GetCurrentUser()
+        [HttpGet("getcurrentadmin")]
+        public async Task<IActionResult> GetCurrentAdmin()
         {
-            var user = await _adminUserManager.FindByEmailFromClaimsPrincipal(User);
+            var user = await _userManager.FindByEmailFromClaimsPrincipal(User);
 
             return Ok(new ApiSuccessResponse<UserDto>(200)
             {
@@ -63,50 +62,53 @@ namespace API.Controllers
             });
         }
 
-        [HttpGet("emailexists")]
+        [HttpGet("adminemailexists")]
         public async Task<ActionResult<bool>> CheckEmailExistsAsync([FromQuery] string email)
         {
-            return await _adminUserManager.FindByEmailAsync(email) != null;
+            return await _userManager.FindByEmailAsync(email) != null;
         }
 
         [Authorize]
-        [HttpGet("address")]
-        public async Task<IActionResult> GetUserAddress()
+        [HttpGet("adminaddress")]
+        public async Task<IActionResult> GetAdminAddress()
         {
-            var user = await _adminUserManager.FindUserByClaimsPrincipalWithAddress(User);
+            var user = await _userManager.FindUserByClaimsPrincipalWithAddress(User);
 
             return Ok(new ApiSuccessResponse<AddressDto>(200)
             {
-                Data = _mapper.Map<AdminAddress, AddressDto>(user.AdminAddress)
+                Data = _mapper.Map<Address, AddressDto>(user.Address)
             });
         }
 
-        [Authorize]
-        [HttpPut("address")]
-        public async Task<IActionResult> UpdateUserAddress(AddressDto address)
+        [HttpPut("adminaddress")]
+        public async Task<IActionResult> UpdateAdminAddress(AddressDto address)
         {
-            var user = await _adminUserManager.FindUserByClaimsPrincipalWithAddress(HttpContext.User);
+            var user = await _userManager.FindUserByClaimsPrincipalWithAddress(HttpContext.User);
 
-            user.AdminAddress = _mapper.Map<AddressDto, AdminAddress>(address);
+            user.Address = _mapper.Map<AddressDto, Address>(address);
 
-            var result = await _adminUserManager.UpdateAsync(user);
+            var result = await _userManager.UpdateAsync(user);
 
             if (result.Succeeded) return Ok(new ApiSuccessResponse<AddressDto>(200)
             {
-                Data = _mapper.Map<AdminAddress, AddressDto>(user.AdminAddress)
+                Data = _mapper.Map<Address, AddressDto>(user.Address)
             });
 
             return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "problem updating user"));
         }
 
-        [HttpPost("login")]
+        [AllowAnonymous]
+        [HttpPost("admin_login")]
         public async Task<IActionResult> Login(LoginDto loginDto)
         {
-            var user = await _adminUserManager.FindByEmailAsync(loginDto.Email);
+            var user = await _userManager.FindByEmailAsync(loginDto.Email);
 
             if (user == null) return Unauthorized(new ApiResponse(401));
 
-            var isEmailConfirmed = await _adminUserManager.IsEmailConfirmedAsync(user);
+            if (!(await _userManager.IsInRoleAsync(user, "Admin") || await _userManager.IsInRoleAsync(user, "SuperAdmin")))
+                return BadRequest(new ApiResponse(400));
+
+            var isEmailConfirmed = await _userManager.IsEmailConfirmedAsync(user);
             if (!isEmailConfirmed) return StatusCode(403, new ApiResponse(
                 403, _sharedResStrLocalizer["login_unconfirmedemail"]));
 
@@ -136,7 +138,7 @@ namespace API.Controllers
             });
         }
 
-        [HttpPost("register")]
+        [HttpPost("registeradmin")]
         public async Task<IActionResult> Register(RegisterDto registerDto, [FromQuery][Url] string clientURI)
         {
             if (clientURI == null) return BadRequest(new ApiValidationErrorResponse()
@@ -152,7 +154,7 @@ namespace API.Controllers
                 });
             }
 
-            var user = new Admin()
+            var user = new AppUser()
             {
                 Email = registerDto.Email,
                 DisplayName = registerDto.DisplayName,
@@ -160,12 +162,12 @@ namespace API.Controllers
                 PhoneNumber = registerDto.Phone
             };
 
-            var result = await _adminUserManager.CreateAsync(user, registerDto.Password);
+            var result = await _userManager.CreateAsync(user, registerDto.Password);
 
             if (!result.Succeeded) return BadRequest(new ApiResponse(400));
 
 
-            var token = await _adminUserManager.GenerateEmailConfirmationTokenAsync(user);
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
             Dictionary<string, string> queryParams = new Dictionary<string, string>
             {
@@ -180,9 +182,9 @@ namespace API.Controllers
             var message = new Message(new List<string> { user.Email }, "BlackStone confirmation email link", confirmationLink);
             await _emailService.SendEmailAsync(message);
 
-            await _adminUserManager.AddToRoleAsync(user, "Visitor");
+            await _userManager.AddToRoleAsync(user, "Visitor");
 
-            return CreatedAtAction("register", "account", new ApiSuccessResponse<UserDto>(201, "Please check your email for the verification action.")
+            return CreatedAtAction("register", "admin", new ApiSuccessResponse<UserDto>(201, "Please check your email for the verification action.")
             {
                 Data = new UserDto
                 {
@@ -192,30 +194,31 @@ namespace API.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpGet("confirmemail")]
         public async Task<IActionResult> ConfirmEmail([FromQuery][EmailAddress] string email, [FromQuery] string token)
         {
-            var user = await _adminUserManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByEmailAsync(email);
 
             if (user == null) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
 
             if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
 
-            var identityResult = await _adminUserManager.ConfirmEmailAsync(user, token);
+            var identityResult = await _userManager.ConfirmEmailAsync(user, token);
 
             if (!identityResult.Succeeded) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
 
-            if (await _adminUserManager.IsInRoleAsync(user, "Visitor"))
+            if (await _userManager.IsInRoleAsync(user, "Visitor"))
             {
-                var removeRoleResult = await _adminUserManager.RemoveFromRoleAsync(user, "Visitor");
+                var removeRoleResult = await _userManager.RemoveFromRoleAsync(user, "Visitor");
 
                 if (!removeRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
                     new ApiResponse(StatusCodes.Status500InternalServerError));
             }
 
-            if (!await _adminUserManager.IsInRoleAsync(user, "Admin"))
+            if (!(await _userManager.IsInRoleAsync(user, "Admin")))
             {
-                var memberRoleResult = await _adminUserManager.AddToRoleAsync(user, "Admin");
+                var memberRoleResult = await _userManager.AddToRoleAsync(user, "Admin");
                 if (!memberRoleResult.Succeeded) return StatusCode(StatusCodes.Status500InternalServerError,
                     new ApiResponse(StatusCodes.Status500InternalServerError));
             }
@@ -223,16 +226,17 @@ namespace API.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "SuperAdmin")]
         [HttpGet("resendconfirmemailtoken")]
         public async Task<IActionResult> ResendTokenToVerifyEmail(ForgetPasswordDto forgetPasswordDto)
         {
-            var user = await _adminUserManager.FindByEmailAsync(forgetPasswordDto.Email);
+            var user = await _userManager.FindByEmailAsync(forgetPasswordDto.Email);
 
             if (user == null) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
 
             if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
 
-            var token = await _adminUserManager.GenerateEmailConfirmationTokenAsync(user);
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
             Dictionary<string, string> queryParams = new Dictionary<string, string>
             {
@@ -248,11 +252,11 @@ namespace API.Controllers
             await _emailService.SendEmailAsync(message);
 
             return Ok(new ApiResponse(200, success: true));
-        }
+        }     
 
-        [Authorize(Roles = "SuperAdmin,Admin")]
-        [HttpDelete("deleteuser")]
-        public async Task<IActionResult> DeleteMember(string email)
+        [Authorize(Roles = "SuperAdmin")]
+        [HttpDelete("deleteadmin")]
+        public async Task<IActionResult> DeleteAdmin(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
 
@@ -268,34 +272,15 @@ namespace API.Controllers
             });
         }
 
-        [Authorize(Roles = "SuperAdmin")]
-        [HttpDelete("deleteadmin")]
-        public async Task<IActionResult> DeleteAdmin(string email)
-        {
-            var user = await _adminUserManager.FindByEmailAsync(email);
-
-            if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
-
-            var result = await _adminUserManager.DeleteAsync(user);
-
-            if (!result.Succeeded) return BadRequest(new ApiResponse(400));
-
-            return Ok(new ApiSuccessResponse<Dictionary<string, string>>(200, "user deleted successfully")
-            {
-                Data = new Dictionary<string, string> { { "email", email } }
-            });
-        }
-
-        [Authorize]
         [HttpPost("changepassword")]
         public async Task<IActionResult> ChangePassword(ChangePasswordDto changePasswordDto)
         {
-            var user = await _adminUserManager.FindByEmailFromClaimsPrincipal(User);
+            var user = await _userManager.FindByEmailFromClaimsPrincipal(User);
 
-            var checkPassword = await _adminUserManager.CheckPasswordAsync(user, changePasswordDto.NewPassword);
+            var checkPassword = await _userManager.CheckPasswordAsync(user, changePasswordDto.NewPassword);
             if (checkPassword) return BadRequest(new ApiResponse(400, "New password must be different from the old password."));
 
-            var result = await _adminUserManager.ChangePasswordAsync(user, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
+            var result = await _userManager.ChangePasswordAsync(user, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
 
             if (!result.Succeeded) return BadRequest(new ApiValidationErrorResponse()
             { Errors = result.Errors.Select(e => e.Description) });
@@ -307,13 +292,13 @@ namespace API.Controllers
         [HttpPost("forgetpassword")]
         public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordDto forgetPasswordDto)
         {
-            var user = await _adminUserManager.FindByEmailAsync(forgetPasswordDto.Email);
+            var user = await _userManager.FindByEmailAsync(forgetPasswordDto.Email);
 
             if (user is null) return BadRequest(new ApiResponse(400, "user not found."));
 
             if (!user.EmailConfirmed) return BadRequest(new ApiResponse(400, "confirm your email to reset password"));
 
-            var token = await _adminUserManager.GeneratePasswordResetTokenAsync(user);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             _logger.LogInformation(token);
 
             Dictionary<string, string> param = new Dictionary<string, string>
@@ -331,34 +316,22 @@ namespace API.Controllers
             return Ok(new ApiResponse(200, "Please check your email for the verification action.", true));
         }
 
-        [Authorize(Roles ="SuperAdmin")]
+        [AllowAnonymous]
         [HttpPost("resetpassword")]
         public async Task<IActionResult> ResetPassword(ResetPasswordDto resetPasswordDto)
         {
-            var user = await _adminUserManager.FindByEmailAsync(resetPasswordDto.Email);
+            var user = await _userManager.FindByEmailAsync(resetPasswordDto.Email);
             if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
 
             resetPasswordDto.Token = HttpUtility.UrlDecode(resetPasswordDto.Token);
             _logger.LogInformation(resetPasswordDto.Token);
 
-            var resetPassResult = await _adminUserManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
+            var resetPassResult = await _userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
             if (!resetPassResult.Succeeded) return BadRequest(new ApiValidationErrorResponse()
             { Errors = resetPassResult.Errors.Select(e => e.Description) });
 
             return Ok(new ApiResponse(200, "password reset successfully", true));
-        }
-
-        [Authorize(Roles = "SuperAdmin,Admin")]
-        [HttpGet("getusers")]
-        public async Task<IActionResult> GetUsers()
-        {
-            var users = await _adminUserManager.Users.Include(u => u.AdminAddress).ToListAsync();
-
-            return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>
-            {
-                Data = _mapper.Map<List<Admin>, List<UserWithAddressDto>>(users)
-            });
-        }
+        }     
 
         [AllowAnonymous]
         [HttpPost("refreshtoken")]
@@ -370,7 +343,7 @@ namespace API.Controllers
             var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
 
             var email = principal.FindFirstValue(ClaimTypes.Email);
-            var user = await _adminUserManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
 
             var validRefreshToken = await _tokenService.CheckValidRefreshToken(email, refreshToken);
@@ -412,8 +385,43 @@ namespace API.Controllers
             return Ok(new ApiResponse(200, "token revoked successfully", success: true));
         }
 
+        #region USers CRUD Operations
+        [HttpDelete("deleteuser")]
+        public async Task<IActionResult> DeleteMember(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (_userManager.IsInRoleAsync(user, "SuperAdmin").Result || _userManager.IsInRoleAsync(user, "SuperAdmin").Result)
+                return BadRequest(new ApiResponse(400, "user not found"));
+
+            if (user == null) return BadRequest(new ApiResponse(400, "user not found"));
+
+            var result = await _userManager.DeleteAsync(user);
+
+            if (!result.Succeeded) return BadRequest(new ApiResponse(400));
+
+            return Ok(new ApiSuccessResponse<Dictionary<string, string>>(200, "user deleted successfully")
+            {
+                Data = new Dictionary<string, string> { { "email", email } }
+            });
+        }
+
+        [HttpGet("getusers")]
+        public async Task<IActionResult> GetUsers()
+        {
+            var admins = await _userManager.GetUsersInRoleAsync("Admin");
+            var superAdmin = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+            var users = await _userManager.Users.Include(u => u.Address)
+                .ToListAsync()
+                .ContinueWith(t => t.Result.Except(admins).Except(superAdmin).ToList());
+
+            return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>
+            {
+                Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users)
+            });
+        }
+        #endregion
         #region Users Activation
-        [Authorize(Roles ="Admin,SuperAdmin")]
         [HttpPost("activateusers")]
         public async Task<IActionResult> ActivateUsers([FromBody] List<string> emailsToActivate)
         {
@@ -437,7 +445,6 @@ namespace API.Controllers
             });
         }
 
-        [Authorize(Roles = "SuperAdmin,Admin")]
         [HttpPost("deactivateusers")]
         public async Task<IActionResult> DeactivateUsers([FromBody] List<string> emailsToDeactivate)
         {
@@ -461,24 +468,26 @@ namespace API.Controllers
             });
         }
 
-        [Authorize(Roles = "SuperAdmin,Admin")]
         [HttpGet("activeusers")]
         public async Task<IActionResult> GetActiveUsers()
         {
-            var users = await _userManager.GetUsersInRoleAsync("Member");
-          
+            var users = await _userManager.Users.Include(u => u.Address)
+              .ToListAsync()
+              .ContinueWith(t => t.Result.Intersect(_userManager.GetUsersInRoleAsync("Member").Result).ToList());
+
             return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>(200)
             {
                 Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users.ToList())
             });
         }
 
-        [Authorize(Roles = "Admin,SuperAdmin")]
         [HttpGet("nonactiveusers")]
         [HttpGet("newusers")]
         public async Task<IActionResult> GetNonActiveUsers()
         {
-            var users = await _userManager.GetUsersInRoleAsync("Visitor");
+            var users = await _userManager.Users.Include(u => u.Address)
+                .ToListAsync()
+                .ContinueWith(t=> t.Result.Intersect(_userManager.GetUsersInRoleAsync("Visitor").Result).ToList());
             
             return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>(200)
             {

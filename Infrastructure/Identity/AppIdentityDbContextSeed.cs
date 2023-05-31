@@ -17,7 +17,9 @@ namespace Infrastructure.Identity
                 var roles = new List<AppUserRole>()
                 {
                     new AppUserRole(){Name="Visitor"},
-                    new AppUserRole(){Name="Member"}
+                    new AppUserRole(){Name="Member"},
+                    new AppUserRole(){Name="Admin"},
+                    new AppUserRole(){Name="SuperAdmin"}
                 };
 
                 foreach (var role in roles)
@@ -51,7 +53,7 @@ namespace Infrastructure.Identity
                 appUser.PhoneNumberConfirmed=true;
                 await userManager.UpdateAsync(appUser);
 
-                await userManager.AddToRoleAsync(appUser, "Member");
+                await userManager.AddToRoleAsync(appUser, "SuperAdmin");
             }   
         }
     }

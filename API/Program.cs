@@ -88,17 +88,12 @@ internal class Program
             using var scope = app.Services.CreateScope();
             var services = scope.ServiceProvider;
             var identityContext = services.GetRequiredService<AppIdentityDbContext>();
-            var adminIdentityContext = services.GetRequiredService<AdminIdentityDbContext>();
             var userManager = services.GetRequiredService<UserManager<AppUser>>();
             var roleManager = services.GetRequiredService<RoleManager<AppUserRole>>();
-            var adminUserManager = services.GetRequiredService<UserManager<Admin>>();
-            var adminRoleManager = services.GetRequiredService<RoleManager<AdminRole>>();
             var sharedLocalizer = services.GetRequiredService<IStringLocalizer<SharedResource>>();
 
             await identityContext.Database.MigrateAsync();
-            await adminIdentityContext.Database.MigrateAsync();
             await AppIdentityDbContextSeed.SeedIdentityAsync(userManager, roleManager);
-            await AdminIdentityDbContextSeed.SeedIdentityAsync(adminUserManager, adminRoleManager);
             ApiResponse.SetLocalizer(sharedLocalizer);
             LocalizerManager.SetLocalizer(sharedLocalizer);
 

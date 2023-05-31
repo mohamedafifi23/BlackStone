@@ -22,6 +22,7 @@ using System.Web;
 
 namespace API.Controllers
 {
+    [Authorize(Roles ="Member")]
     public class AccountController : BaseApiController
     {
         private readonly UserManager<AppUser> _userManager;
@@ -48,7 +49,6 @@ namespace API.Controllers
             _otpService = otpService;
         }
 
-        [Authorize(Roles = "Member")]
         [HttpGet("getcurrentuser")]
         public async Task<IActionResult> GetCurrentUser()
         {
@@ -63,14 +63,14 @@ namespace API.Controllers
                 }
             });
         }
-        
+
+        [AllowAnonymous]
         [HttpGet("emailexists")]
         public async Task<ActionResult<bool>> CheckEmailExistsAsync([FromQuery] string email)
         {
             return await _userManager.FindByEmailAsync(email) != null;
         }
 
-        [Authorize(Roles = "Member")]
         [HttpGet("address")]
         public async Task<IActionResult> GetUserAddress()
         {
@@ -82,7 +82,6 @@ namespace API.Controllers
             });
         }
 
-        [Authorize(Roles = "Member")]
         [HttpPut("address")]
         public async Task<IActionResult> UpdateUserAddress(AddressDto address)
         {
@@ -100,6 +99,7 @@ namespace API.Controllers
             return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "problem updating user"));    
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto loginDto)
         {
@@ -135,8 +135,9 @@ namespace API.Controllers
                     RefreshToken=refreshToken.Token
                 }
             });
-        }        
+        }
 
+        [AllowAnonymous]
         [HttpPost("registerotp")]
         public async Task<IActionResult> RegisterOtp(RegisterDto registerDto)
         {
@@ -161,9 +162,7 @@ namespace API.Controllers
             if (!result.Succeeded) return BadRequest(new ApiResponse(400));
 
             var otp = _otpService.GenerateRandomNumericOTP();
-            //var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            //var token = await _userManager.GenerateUserTokenAsync(user, "EmailConfirmationTotpTokenProvider", "EmailConfirmationOtp");
-            var token = Convert.ToBase64String(await _userManager.CreateSecurityTokenAsync(user));
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
             await _otpService.SendMailOtpAsync(user.Email, "BlackStone confirmation email link", mailOtp.Otp);
                         
@@ -179,6 +178,7 @@ namespace API.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpGet("resendconfirmemailotp")]
         public async Task<IActionResult> ResendOtpToVerifyEmail([EmailAddress] string email)
         {
@@ -189,14 +189,14 @@ namespace API.Controllers
             if (user.EmailConfirmed) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest, "email already confirmed"));
 
             var otp = _otpService.GenerateRandomNumericOTP();
-            //var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var token = Convert.ToBase64String(await _userManager.CreateSecurityTokenAsync(user));
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
             await _otpService.SendMailOtpAsync(user.Email, "BlackStone confirmation email link", mailOtp.Otp);
 
             return Ok(new ApiResponse(200, success: true));
         }
 
+        [AllowAnonymous]
         [HttpPost("confirmemailotp")]
         public async Task<IActionResult> ConfirmEmailOtp([FromBody] ConfirmEmailOtpDto confirmEmailOtpDto)
         {
@@ -209,9 +209,7 @@ namespace API.Controllers
             MailOtp valifMailOtp = await _otpService.VerifyUserMailOtpAsync(confirmEmailOtpDto.Email, confirmEmailOtpDto.Otp);
             if (string.IsNullOrEmpty(valifMailOtp.Token)) return BadRequest(new ApiResponse(400, "your email is not verified. check correctness of entered otp or it will be expired."));
 
-            //var identityResult = await _userManager.ConfirmEmailAsync(user, valifMailOtp.Token);
-            user.EmailConfirmed = true;
-            var identityResult = await _userManager.UpdateAsync(user);
+            var identityResult = await _userManager.ConfirmEmailAsync(user, valifMailOtp.Token);
             if (!identityResult.Succeeded) return BadRequest(new ApiResponse(StatusCodes.Status400BadRequest));
 
             if (await _userManager.IsInRoleAsync(user, "Visitor"))
@@ -233,7 +231,6 @@ namespace API.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Member")]
         [HttpPost("changepassword")]
         public async Task<IActionResult> ChangePassword(ChangePasswordDto changePasswordDto)
         {
@@ -259,8 +256,7 @@ namespace API.Controllers
 
             if (!await _userManager.IsEmailConfirmedAsync(user)) return BadRequest(new ApiResponse(400, "confirm your email to reset password"));
 
-            //var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var token = Convert.ToBase64String(await _userManager.CreateSecurityTokenAsync(user));
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var otp = _otpService.GenerateRandomNumericOTP();
             MailOtp mailOtp = await _otpService.SaveUserMailOtpAsync(user.Email, otp, token);
 
@@ -271,6 +267,7 @@ namespace API.Controllers
             return BadRequest(new ApiResponse(400, "something went wrong when sending verfication OTP"));
         }
 
+        [AllowAnonymous]
         [HttpPost("resetpasswordotp")]
         public async Task<IActionResult> ResetPasswordOtp(ResetPasswordOtpDto resetPasswordOtpDto)
         {
@@ -289,6 +286,7 @@ namespace API.Controllers
             return Ok(new ApiResponse(200, "password reset successfully", true));
         }
 
+        [AllowAnonymous]
         [HttpPost("refreshtoken")]
         public async Task<IActionResult> RefreshToken(RefreshTokenDto refreshTokenDto)
         {
@@ -324,7 +322,7 @@ namespace API.Controllers
             });
         }
 
-        [Authorize(Roles = "Member"), HttpPost("revoke")]
+        [HttpPost("revoke")]
         public async Task<IActionResult> Revoke()
         {
             string email = User.RetrieveEmailFromPrincipal();    

@@ -23,7 +23,6 @@ namespace API.Extensions
             });
 
             services.AddScoped<IAppUserTokenService, AppUserTokenService>();
-            services.AddScoped<IAdminTokenService, AdminTokenService>();
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
