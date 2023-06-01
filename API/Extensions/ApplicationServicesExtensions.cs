@@ -1,9 +1,13 @@
 ﻿using API.Errors;
+using Core;
 using Core.IServices;
 using Core.ServiceHelpers.EmailSenderService;
 using Core.ServiceHelpers.PaymentService;
+using Infrastructure;
+using Infrastructure.Data;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Extensions
 {
@@ -11,6 +15,11 @@ namespace API.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddDbContext<ApplicationDbContext>(options =>
+            {
+                options.UseSqlServer(configuration.GetConnectionString("AppConnection"));
+            });
+
             string? allowedHosts = configuration.GetSection("AllowedHosts").Value;
             allowedHosts = allowedHosts ?? "*";
 
@@ -51,6 +60,8 @@ namespace API.Extensions
             services.AddScoped<IPaymentService, PaymentService>();            
 
             services.AddScoped<IOtpService, OtpService>();
+
+            services.AddScoped<IUniOfWork, UnitOfWork>();
 
             return services;
         }

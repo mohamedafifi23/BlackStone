@@ -2,6 +2,8 @@
 using API.Errors;
 using API.Extensions;
 using AutoMapper;
+using Core;
+using Core.Entities;
 using Core.Entities.Identity;
 using Core.IServices;
 using Core.ServiceHelpers.EmailSenderService;
@@ -29,12 +31,12 @@ namespace API.Controllers
         private readonly ILogger<AdminController> _logger;
         private readonly IStringLocalizer<SharedResource> _sharedResStrLocalizer;
         private readonly UserManager<AppUser> _userManager;
-        private readonly IEmailSenderService _emailSenderService;
+        private readonly IUniOfWork _uniOfWork;
 
         public AdminController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager
             , IAppUserTokenService tokenService, IMapper mapper, IEmailSenderService emailService
             , ILogger<AdminController> logger, IStringLocalizer<SharedResource> sharedResStrLocalizer
-            , IEmailSenderService emailSenderService)
+            ,IUniOfWork uniOfWork)
         {
             _signInManager = signInManager;
             _tokenService = tokenService;
@@ -43,7 +45,7 @@ namespace API.Controllers
             _logger = logger;
             _sharedResStrLocalizer = sharedResStrLocalizer;
             _userManager = userManager;
-            _emailSenderService = emailSenderService;
+            _uniOfWork = uniOfWork;
         }
 
         [Authorize]
@@ -420,6 +422,32 @@ namespace API.Controllers
                 Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users)
             });
         }
+
+        [HttpGet("searchuserbyname")]
+        public async Task<IActionResult> SeacrhUserByName(string name)
+        {
+            var admins = await _userManager.GetUsersInRoleAsync("Admin");
+            var superAdmin = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+            var users = await _userManager.Users.Include(u => u.Address)
+                .Where(u => u.DisplayName.Contains(name))
+                .ToListAsync()
+                .ContinueWith(t => t.Result.Except(admins).Except(superAdmin).ToList());
+            return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>
+            {
+                Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users)
+            });
+        }
+
+        [HttpGet("searchuserbyemail")]
+        public async Task<IActionResult> SeacrhUserByEmail(string email)
+        {
+            var user = await _userManager.Users.Include(u => u.Address)
+                .FirstOrDefaultAsync(u => u.Email == email);
+            return Ok(new ApiSuccessResponse<UserWithAddressDto>
+            {
+                Data = _mapper.Map<AppUser, UserWithAddressDto>(user)
+            });
+        }
         #endregion
         #region Users Activation
         [HttpPost("activateusers")]
@@ -497,7 +525,123 @@ namespace API.Controllers
         #endregion
 
         #region User Groups
-         
+        [HttpPost("creategroup")]
+        public async Task<IActionResult> CreateGroup([FromBody] GroupDto groupDto)
+        {
+            var group = _mapper.Map<GroupDto, Group>(groupDto);
+
+            await _uniOfWork.Repository<Group>().AddAsync(group);
+            await _uniOfWork.Complete();
+
+            return Ok(new ApiSuccessResponse<GroupDto>(200, "group created successfully")
+            {
+                Data = _mapper.Map<Group, GroupDto>(group)
+            });
+        }
+
+        [HttpPut("updategroup")]
+        public async Task<IActionResult> UpdateGroup([FromBody] GroupDto groupDto)
+        {
+            var group = await _uniOfWork.Repository<Group>().GetByIdAsync(groupDto.Id);
+            if (group == null) return BadRequest(new ApiResponse(400, "group not found"));
+            
+            _mapper.Map<GroupDto, Group>(groupDto, group);
+            await _uniOfWork.Complete();
+
+            return Ok(new ApiSuccessResponse<GroupDto>(200, "group updated successfully")
+            {
+                Data = _mapper.Map<Group, GroupDto>(group)
+            });
+        }
+
+        [HttpDelete("deletegroup")]
+        public async Task<IActionResult> DeleteGroup(long groupId)
+        {
+            var group = await _uniOfWork.Repository<Group>().GetByIdAsync(groupId);
+            if (group == null) return BadRequest(new ApiResponse(400, "group not found"));
+
+            _uniOfWork.Repository<Group>().Delete(group);
+            await _uniOfWork.Complete();
+            
+            return Ok(new ApiSuccessResponse<Dictionary<string, long>>(200, "group deleted successfully")
+            {
+                Data = new Dictionary<string, long> { { "groupId", groupId } }
+            });
+        }
+
+        [HttpGet("getgroups")]
+        public async Task<IActionResult> GetGroups()
+        {
+            var groups = await _uniOfWork.Repository<Group>().GetAllAsync();
+
+            return Ok(new ApiSuccessResponse<List<GroupDto>>(200)
+            {
+                Data = _mapper.Map<List<Group>, List<GroupDto>>(groups.ToList())
+            });
+        }
+
+        [HttpGet("getgroup")]
+        public async Task<IActionResult> GetGroup(long groupId)
+        {
+            var group = await _uniOfWork.Repository<Group>().GetByIdAsync(groupId);
+            if (group == null) return BadRequest(new ApiResponse(400, "group not found"));
+            
+            return Ok(new ApiSuccessResponse<GroupDto>(200)
+            {
+                Data = _mapper.Map<Group, GroupDto>(group)
+            });
+        }
+
+        [HttpPost("adduserstogroup")]
+        public async Task<IActionResult> AddUsersToGroup([FromBody] List<string> emails, long groupId)
+        {
+            var group = await _uniOfWork.Repository<Group>().GetByIdAsync(groupId);
+            if (group == null) return BadRequest(new ApiResponse(400, "group not found"));
+
+
+            var usersGroup = await _uniOfWork.Repository<UserGroup>().GetAsync(ug => emails.Contains(ug.Email));
+            foreach (var userGroup in usersGroup)
+            {
+                if (userGroup.GroupId == groupId) return BadRequest(new ApiResponse(400, $"user '{userGroup.Email}' already in '{group.Name}' group"));                
+            }
+
+            foreach (var email in emails)
+            {
+                await _uniOfWork.Repository<UserGroup>().AddAsync(new UserGroup { Email = email, GroupId = groupId });
+            }
+            await _uniOfWork.Complete();
+            
+            return Ok(new ApiSuccessResponse<List<string>>(200, "users added to group successfully")
+            {
+                Data = emails
+            });
+        }
+
+        [HttpPost("removeusersfromgroup")]
+        public async Task<IActionResult> RemoveUsersFromGroup([FromBody] List<string> emails, long groupId)
+        {
+            var group = await _uniOfWork.Repository<Group>().GetByIdAsync(groupId);
+            if (group == null) return BadRequest(new ApiResponse(400, "group not found"));
+            
+            var usersGroup = await _uniOfWork.Repository<UserGroup>().GetAsync(ug => emails.Contains(ug.Email));
+            if (usersGroup.Count == 0) return BadRequest(new ApiResponse(400, "no user at this group not found"));            
+            foreach (var userGroup in usersGroup)
+            {
+                if (userGroup.GroupId != groupId) return BadRequest(new ApiResponse(400, $"user '{userGroup.Email}' not in '{group.Name}' group"));
+            }
+
+            foreach (var email in emails)
+            {
+                var userGroup = await _uniOfWork.Repository<UserGroup>().GetAsync(ug => ug.Email == email && ug.GroupId == groupId);
+                _uniOfWork.Repository<UserGroup>().Delete(userGroup.FirstOrDefault());
+            }
+            await _uniOfWork.Complete();
+
+            return Ok(new ApiSuccessResponse<List<string>>(200, "users removed from group successfully")
+            {
+                Data = emails
+            });
+        }
         #endregion
     }
 }

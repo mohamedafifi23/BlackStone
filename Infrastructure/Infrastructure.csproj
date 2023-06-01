@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Data\EntityConfig\**" />
+    <EmbeddedResource Remove="Data\EntityConfig\**" />
+    <None Remove="Data\EntityConfig\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
@@ -24,11 +30,6 @@
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.30.1" />
     <PackageReference Include="NETCore.MailKit" Version="2.1.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.30.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Data\EntityConfig\" />
-    <Folder Include="Repositories\" />
   </ItemGroup>
 
 </Project>

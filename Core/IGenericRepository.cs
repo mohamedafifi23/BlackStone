@@ -15,7 +15,9 @@ namespace Core
         Task AddRangeAsync(IEnumerable<TEntity> entities);
 
         TEntity GetById(object id);
+        TEntity GetById(params object[] keys);
         Task<TEntity> GetByIdAsync(object id);
+        Task<TEntity> GetByIdAsync(params object[] keys);
         IReadOnlyList<TEntity> GetAll();
         Task<IReadOnlyList<TEntity>> GetAllAsync();
         IReadOnlyList<TEntity> Get(
@@ -32,7 +34,8 @@ namespace Core
         void Update(TEntity entity);    
         void UpdateRange(IEnumerable<TEntity> entities);
 
-        void Delete(object id);    
+        void Delete(object id);
+        void Delete(TEntity entityToDelete);
         void DeleteRange(IEnumerable<TEntity> entities);                  
     }
 }

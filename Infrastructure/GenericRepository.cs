@@ -82,11 +82,14 @@ namespace Infrastructure
                 query = query.Where(filter);
             }
 
-            foreach (string property in includeProperties.Split
-                (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            if(includeProperties != null)
             {
-                query = query.Include(property);
-            }
+                foreach (string property in includeProperties.Split
+                (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    query = query.Include(property);
+                }
+            }            
 
             if (orderBy != null)
             {
@@ -111,11 +114,21 @@ namespace Infrastructure
         public virtual TEntity GetById(object id)
         {
             return _dbSet.Find(id);
-        }
+        }        
 
         public virtual async Task<TEntity> GetByIdAsync(object id)
         {
             return await _dbSet.FindAsync(id);
+        }
+
+        public virtual TEntity GetById(params object[] keys)
+        {
+            return _dbSet.Find(keys);
+        }
+
+        public virtual async Task<TEntity> GetByIdAsync(params object[] keys)
+        {
+            return await _dbSet.FindAsync(keys[0], keys[1]);
         }
         #endregion
 

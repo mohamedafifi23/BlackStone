@@ -1,5 +1,6 @@
 ﻿using Core;
 using Core.Entities;
+using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections;
@@ -12,10 +13,10 @@ namespace Infrastructure
 {
     public class UnitOfWork : IUniOfWork
     {
-        private readonly DbContext _context;
+        private readonly ApplicationDbContext _context;
         private Hashtable _repositories;
 
-        public UnitOfWork(DbContext context)
+        public UnitOfWork(ApplicationDbContext context)
         {
             _context = context;
         }
