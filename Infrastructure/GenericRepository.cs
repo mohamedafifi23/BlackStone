@@ -13,13 +13,11 @@ namespace Infrastructure
     public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEntity : class
     {
         private readonly DbContext _context;
-        private readonly ILogger<GenericRepository<TEntity>> _logger;
         private DbSet<TEntity> _dbSet;
 
-        public GenericRepository(DbContext context, ILogger<GenericRepository<TEntity>> logger)
+        public GenericRepository(DbContext context)
         {
             _context = context;
-            _logger = logger;
             _dbSet = _context.Set<TEntity>();
         }
 
@@ -153,7 +151,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                //_logger.LogError(ex, ex.Message);
             }
 
             return null;
@@ -187,7 +185,7 @@ namespace Infrastructure
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
+                //_logger.LogError(ex, ex.Message);
             }
 
             return null;
