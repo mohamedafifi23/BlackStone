@@ -125,70 +125,52 @@ namespace Infrastructure
 
         public virtual TEntity GetById(params object[] keys)
         {
-            try
+            if (keys == null || keys.Length == 0)
             {
-                if (keys == null || keys.Length == 0)
-                {
-                    throw new ArgumentException("Keys cannot be null or empty");
-                }
-
-                if (keys.Length == 1)
-                {
-                    return _dbSet.Find(keys[0]);
-                }
-
-                if (keys.Length == 2)
-                {
-                    return _dbSet.Find(keys[0], keys[1]);
-                }
-
-                if (keys.Length == 3)
-                {
-                    return _dbSet.Find(keys[0], keys[1], keys[2]);
-                }
-
-                throw new ArgumentException("Too many keys");
-            }
-            catch (Exception ex)
-            {
-                //_logger.LogError(ex, ex.Message);
+                throw new ArgumentException("Keys cannot be null or empty");
             }
 
-            return null;
+            if (keys.Length == 1)
+            {
+                return _dbSet.Find(keys[0]);
+            }
+
+            if (keys.Length == 2)
+            {
+                return _dbSet.Find(keys[0], keys[1]);
+            }
+
+            if (keys.Length == 3)
+            {
+                return _dbSet.Find(keys[0], keys[1], keys[2]);
+            }
+
+            throw new ArgumentException("Too many keys");
         }
 
         public virtual async Task<TEntity> GetByIdAsync(params object[] keys)
         {
-            try
+            if (keys == null || keys.Length == 0)
             {
-                if (keys == null || keys.Length == 0)
-                {
-                    throw new ArgumentException("Keys cannot be null or empty");
-                }
-
-                if (keys.Length == 1)
-                {
-                    return await _dbSet.FindAsync(keys[0]);
-                }
-
-                if (keys.Length == 2)
-                {
-                    return await _dbSet.FindAsync(keys[0], keys[1]);
-                }
-
-                if (keys.Length == 3)
-                {
-                    return await _dbSet.FindAsync(keys[0], keys[1], keys[2]);
-                }
-
-                throw new ArgumentException("Too many keys");
-            }
-            catch (Exception ex)
-            {
-                //_logger.LogError(ex, ex.Message);
+                throw new ArgumentException("Keys cannot be null or empty");
             }
 
-            return null;
+            if (keys.Length == 1)
+            {
+                return await _dbSet.FindAsync(keys[0]);
+            }
+
+            if (keys.Length == 2)
+            {
+                return await _dbSet.FindAsync(keys[0], keys[1]);
+            }
+
+            if (keys.Length == 3)
+            {
+                return await _dbSet.FindAsync(keys[0], keys[1], keys[2]);
+            }
+
+            throw new ArgumentException("Too many keys");
         }
         #endregion
 
