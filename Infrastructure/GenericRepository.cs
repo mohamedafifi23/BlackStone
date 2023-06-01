@@ -1,5 +1,6 @@
 ﻿using Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +13,13 @@ namespace Infrastructure
     public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEntity : class
     {
         private readonly DbContext _context;
+        private readonly ILogger<GenericRepository<TEntity>> _logger;
         private DbSet<TEntity> _dbSet;
-        public GenericRepository(DbContext context)
+
+        public GenericRepository(DbContext context, ILogger<GenericRepository<TEntity>> logger)
         {
             _context = context;
+            _logger = logger;
             _dbSet = _context.Set<TEntity>();
         }
 
@@ -123,12 +127,70 @@ namespace Infrastructure
 
         public virtual TEntity GetById(params object[] keys)
         {
-            return _dbSet.Find(keys);
+            try
+            {
+                if (keys == null || keys.Length == 0)
+                {
+                    throw new ArgumentException("Keys cannot be null or empty");
+                }
+
+                if (keys.Length == 1)
+                {
+                    return _dbSet.Find(keys[0]);
+                }
+
+                if (keys.Length == 2)
+                {
+                    return _dbSet.Find(keys[0], keys[1]);
+                }
+
+                if (keys.Length == 3)
+                {
+                    return _dbSet.Find(keys[0], keys[1], keys[2]);
+                }
+
+                throw new ArgumentException("Too many keys");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+            }
+
+            return null;
         }
 
         public virtual async Task<TEntity> GetByIdAsync(params object[] keys)
         {
-            return await _dbSet.FindAsync(keys[0], keys[1]);
+            try
+            {
+                if (keys == null || keys.Length == 0)
+                {
+                    throw new ArgumentException("Keys cannot be null or empty");
+                }
+
+                if (keys.Length == 1)
+                {
+                    return await _dbSet.FindAsync(keys[0]);
+                }
+
+                if (keys.Length == 2)
+                {
+                    return await _dbSet.FindAsync(keys[0], keys[1]);
+                }
+
+                if (keys.Length == 3)
+                {
+                    return await _dbSet.FindAsync(keys[0], keys[1], keys[2]);
+                }
+
+                throw new ArgumentException("Too many keys");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+            }
+
+            return null;
         }
         #endregion
 
