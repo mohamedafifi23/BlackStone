@@ -423,8 +423,8 @@ namespace API.Controllers
             });
         }
 
-        [HttpGet("searchuserbyname")]
-        public async Task<IActionResult> SeacrhUserByName(string name)
+        [HttpGet("searchuserbydisplayname")]
+        public async Task<IActionResult> SeacrhUserByDisplayName(string name)
         {
             var admins = await _userManager.GetUsersInRoleAsync("Admin");
             var superAdmin = await _userManager.GetUsersInRoleAsync("SuperAdmin");
@@ -432,6 +432,22 @@ namespace API.Controllers
                 .Where(u => u.DisplayName.Contains(name))
                 .ToListAsync()
                 .ContinueWith(t => t.Result.Except(admins).Except(superAdmin).ToList());
+            return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>
+            {
+                Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users)
+            });
+        }
+
+        [HttpGet("searchuserbyfullname")]
+        public async Task<IActionResult> SeacrhUserByName(string name)
+        {
+            var admins = await _userManager.GetUsersInRoleAsync("Admin");
+            var superAdmin = await _userManager.GetUsersInRoleAsync("SuperAdmin");
+            var users = await _userManager.Users.Include(u => u.Address)
+                .Where(u=> (u.Address.FirstName+" "+u.Address.MiddleName+" "+u.Address.LastName).Contains(name))
+                .ToListAsync()
+                .ContinueWith(t => t.Result.Except(admins).Except(superAdmin).ToList());
+
             return Ok(new ApiSuccessResponse<List<UserWithAddressDto>>
             {
                 Data = _mapper.Map<List<AppUser>, List<UserWithAddressDto>>(users)

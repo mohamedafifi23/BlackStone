@@ -67,7 +67,7 @@ namespace API.Controllers
         public string Add(TestDto dto)
         {            
             _logger.LogInformation(DateTime.Now.ToLongTimeString());
-
+            _logger.LogInformation(DateTime.UtcNow.ToLongTimeString());
             var res = _sharedResourceLocalizer["hello"];
             //var res = _localizer2.GetString("hello").Value ?? "";
 
