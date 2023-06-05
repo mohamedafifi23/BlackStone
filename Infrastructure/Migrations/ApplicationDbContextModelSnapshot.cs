@@ -40,7 +40,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Groups");
+                    b.ToTable("Groups", (string)null);
                 });
 
             modelBuilder.Entity("Core.Entities.Identity.MailOtp", b =>
@@ -61,7 +61,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Email");
 
-                    b.ToTable("MailOtp");
+                    b.ToTable("MailOtp", (string)null);
                 });
 
             modelBuilder.Entity("Core.Entities.UserGroup", b =>
@@ -76,7 +76,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("UserGroups");
+                    b.ToTable("UserGroups", (string)null);
                 });
 
             modelBuilder.Entity("Core.Entities.UserGroup", b =>
